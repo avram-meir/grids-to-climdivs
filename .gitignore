@@ -1,0 +1,9 @@
+# Ignore all files in the work and output directories
+work/
+output/
+
+# Ignore log files
+logs/
+*.log
+*.logs
+
