@@ -40,32 +40,14 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util qw(looks_like_number);
+use File::Basename qw(fileparse basename);
 use vars qw(@ISA @EXPORT_OK);
 use Exporter;
 
 @ISA       = qw(Exporter);
 @EXPORT_OK = qw(get_climdivs);
 
-# *** SET THIS VARIABLE IN THE CALLING PROGRAM IN A BEGIN BLOCK ***
-
-my $mapfile;
-
-# --- Load map information ---
-
-confess "Map file must be supplied (e.g., set the variable \$GridToClimdivs::mapfile)" unless($mapfile);
-confess "Invalid mapfile" unless(-s $mapfile);
-open(MAP,'<',$mapfile) or confess "Could not open $mapfile for reading";
-{ my $header = <MAP>; }
 my @map;
-
-while(<MAP>) {
-	my $line = $_;
-	chomp $line;
-	my($lon,$lat,$stcd) = split(/\|/,$line);
-	push(@map,$stcd);
-}
-
-close(MAP);
 
 my @stcd = (101,102,103,104,105,106,107,108,201,202,203,204,205,206,207,301,302,303,304,305,306,307,308,309,401,402,403,404,405,406,407,
 501,502,503,504,505,601,602,603,701,702,801,802,803,804,805,806,807,901,902,903,904,905,906,907,908,909,1001,1002,1003,1004,1005,1006,
@@ -81,7 +63,28 @@ my @stcd = (101,102,103,104,105,106,107,108,201,202,203,204,205,206,207,301,302,
 4404,4405,4406,4501,4502,4503,4504,4505,4506,4507,4508,4509,4510,4601,4602,4603,4604,4605,4606,4701,4702,4703,4704,4705,4706,4707,4708,
 4709,4801,4802,4803,4804,4805,4806,4807,4808,4809,4810);
 
+sub set_map {
+	confess "Argument required" unless(@_);
+	my $mapfile = shift;
+
+	# --- Load map information ---
+
+	confess "Invalid mapfile" unless(-s $mapfile);
+	open(MAP,'<',$mapfile) or confess "Could not open $mapfile for reading";
+	{ my $header = <MAP>; }
+
+	while(<MAP>) {
+        	my $line = $_;
+        	chomp $line;
+        	my($lon,$lat,$stcd) = split(/\|/,$line);
+        	push(@map,$stcd);
+	}
+	
+	close(MAP);
+}
+
 sub get_climdivs {
+	confess "Map not found - use set_map to load it into package data" unless(@map);
 	confess "Argument required" unless(@_);
 	my $data_ref = shift;
 
