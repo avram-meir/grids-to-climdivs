@@ -39,6 +39,7 @@ This documentation was last updated on: 03FEB2022
 use strict;
 use warnings;
 use Carp;
+use Scalar::Util qw(looks_like_number);
 use vars qw(@ISA @EXPORT_OK);
 use Exporter;
 
@@ -102,7 +103,7 @@ sub get_climdivs {
 	GRIDPOINT: for(my $i=0; $i<@map; $i++) {
 		next GRIDPOINT unless(exists $sums->{$map[$i]});
 
-		if(looks_like_number($gridded_data[$i]) and abs($gridded_data[$i] < 5000) {
+		if(looks_like_number($gridded_data[$i]) and abs($gridded_data[$i] < 5000)) {
 			$sums->{$map[$i]} = $sums->{$map[$i]} + $gridded_data[$i];
 			$npts->{$map[$i]} = $npts->{$map[$i]} + 1;
 		}
