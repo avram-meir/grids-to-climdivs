@@ -4,19 +4,25 @@
 
 =head1 NAME
 
-create-products - Template perl script
+grids-to-climdivs - Create climate divisions data from gridded data and write to a directory
 
 =head1 SYNOPSIS
 
- create-products.pl [--d]
- create-products.pl -h
- create-products.pl -man
+ grids-to-climdivs.pl [-c|-d|-o]
+ grids-to-climdivs.pl -h
+ grids-to-climdivs.pl -man
 
  [OPTION]            [DESCRIPTION]                                    [VALUES]
 
+ -config, -c         Configuration file containing information        filename
+                     describing the input dataset and output 
+                     filename
  -date, -d           Date argument                                    YYYYMMDD
  -help, -h           Print usage message and exit
  -manual, -man       Display script documentation
+ -output, -o         Output directory where the climate divisions 
+                     data will be written. Default location if none 
+                     supplied is ../work
 
 =head1 DESCRIPTION
 
@@ -36,7 +42,7 @@ create-products - Template perl script
 
 Adam Allgood
 
-This documentation was last updated on: 02FEB2022
+This documentation was last updated on: 23FEB2022
 
 =cut
 
@@ -53,18 +59,28 @@ use Date::Manip;
 # --- Identify script ---
 
 my($script_name,$script_path,$script_suffix);
-BEGIN { ($script_name,$script_path,$script_suffix) = fileparse($0, qr/\.[^.]*/); }
+BEGIN { ($script_name,$script_path,$script_suffix) = fileparse(__FILE__, qr/\.[^.]*/); }
+
+# --- Application library packages ---
+
+use lib "$script_path../lib/perl";
+use Regrid qw(regrid);
+use GridToClimdivs qw(get_climdivs);
 
 # --- Get the command-line options ---
 
+my $config      = '';
 my $date        = ParseDateString('today');  # Defaults to today's date if no -date option is supplied
 my $help        = undef;
 my $manual      = undef;
+my $output      = "$script_path../output";   # Defaults to this directory if no -output option is supplied
 
 GetOptions(
+	'config|c=s'     => \$config,
 	'date|d=s'       => \$date,
 	'help|h'         => \$help,
 	'manual|man'     => \$manual,
+	'output|o=s'     => \$output,
 );
 
 # --- Process options -help or -manual if invoked ---
@@ -81,10 +97,29 @@ if($help or $manual) {
 
 }
 
+my $opts_failed = '';
+
+# --- Validate config argument ---
+
+unless($config)    { $opts_failed = join("\n",$opts_failed,'Option -config must be supplied'); }
+unless(-s $config) { $opts_failed = join("\n",$opts_failed,'Option -config must be set to an existing file'); }
+
 # --- Validate date argument ---
 
 my $day = ParseDateString($date);
-unless($day) { die "Invalid -date argument $date - exiting"; }
+unless($day) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"); }
+
+# --- Process failed options ---
+
+if($opts_failed) {
+
+	pod2usage( {
+		-message => "$opts_failed\n",
+		-exitval => 1,
+		-verbose => 0,
+	} );
+
+}
 
 # --- Do something cool ---
 
