@@ -55,6 +55,7 @@ use File::Path qw(mkpath);
 use Scalar::Util qw(blessed looks_like_number openhandle);
 use Pod::Usage;
 use Date::Manip;
+use Config::Simple;
 
 # --- Identify script ---
 
@@ -106,8 +107,9 @@ unless(-s $config) { $opts_failed = join("\n",$opts_failed,'Option -config must 
 
 # --- Validate date argument ---
 
-my $day = ParseDateString($date);
-unless($day) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"); }
+my $day = Date::Manip::Date->new();
+my $err = $day->parse($date);
+if($err) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"); }
 
 # --- Process failed options ---
 
@@ -120,6 +122,28 @@ if($opts_failed) {
 	} );
 
 }
+
+print $day->printf("The date argument is %Y %m %d")."\n";
+
+# --- Pull information from the configuration file ---
+
+my $config_params  = Config::Simple->new($config);
+my $input_file     = $config_params->param("input.file");
+my $input_template = $config_params->param("input.template");
+my $output_file    = $config_params->param("output.file");
+
+# --- List of allowed variables in the config file ---
+
+my $APP_PATH       = "$script_path../"
+my $DATA_IN        = ${DATA_IN};       # Would need to have this set as environment variable
+my $DATA_OUT       = ${DATA_OUT};      # Would need to have this set as environment variable
+
+# --- Parse any allowed variables in the config file params ---
+
+# --- Parse any date info in the config file params ---
+
+$input_file        = $day->printf($input_file);
+$output_file       = $day->printf($output_file);
 
 # --- Do something cool ---
 
