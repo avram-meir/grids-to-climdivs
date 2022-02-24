@@ -52,6 +52,9 @@ use Getopt::Long;
 use File::Basename qw(fileparse basename);
 use File::Copy qw(copy move);
 use File::Path qw(mkpath);
+require File::Temp;
+use File::Temp ();
+use File::Temp qw(:seekable);
 use Scalar::Util qw(blessed looks_like_number openhandle);
 use Pod::Usage;
 use Date::Manip;
@@ -125,12 +128,18 @@ if($opts_failed) {
 
 print $day->printf("The date argument is %Y %m %d")."\n";
 
+# --- Create output directory if needed ---
+
+unless(-d $output) { mkpath($output) or die "Could not create directory $output - exiting"; }
+
 # --- Pull information from the configuration file ---
 
 my $config_params  = Config::Simple->new($config);
 my $input_file     = $config_params->param("input.file");
+my $input_regrid   = $config_params->param("input.regrid");
 my $input_template = $config_params->param("input.template");
 my $output_file    = $config_params->param("output.file");
+my $output_desc    = $config_params->param("output.description");
 
 # --- List of allowed variables in the config file ---
 
@@ -143,27 +152,56 @@ my %allowed_vars = (
 # --- Parse any allowed variables in the config file params ---
 
 $input_file     =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+$input_regrid   =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
 $input_template =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
 $output_file    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+$output_desc    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
 
-if($input_file =~ /illegal000BLORT000illegal/ or $input_template =~ /illegal000BLORT000illegal/ or $output_file =~ /illegal000BLORT000illegal/) {
+if($input_file =~ /illegal000BLORT000illegal/ or $input_regrid =~ /illegal000BLORT000illegal/ or $input_template =~ /illegal000BLORT000illegal/ or $output_file =~ /illegal000BLORT000illegal/ or $output_desc =~ /illegal000BLORT000illegal/) {
 	die "Illegal variable(s) found in $config - exiting";
 }
 
-# --- Parse any date info in the config file params ---
+# --- Parse any date wildcards in the config file params ---
 
 $input_file        = $day->printf($input_file);
 $input_template    = $day->printf($input_template);
 $output_file       = $day->printf($output_file);
+$output_desc       = $day->printf($output_desc);
 
 print "\n";
 print "Input file:     $input_file\n";
 print "Input template: $input_template\n";
+print "Regrid:         $input_regrid\n";
 print "Output file:    $output_file\n";
+print "Output desc:    $output_desc\n";
 
-# --- Do something cool ---
+# --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
 
-print "Hello, world!\n";
+if($input_regrid) {
+	my $temp_dir     = File::Temp->newdir();
+	my $input_regrid = File::Temp->new(DIR => $temp_dir);
+	my $regrid_file  = $input_regrid->filename;
+	regrid($input_template,$input_file,$regrid_file);
+	$input_file      = $regrid_file;
+}
+
+# --- Convert the gridded data to the climate divisions ---
+
+open(GRID,'<',$input_file) or die "Could not open binary data file $input_file - exiting";
+binmode(GRID);
+my $grid = join('',<GRID>);
+close(GRID);
+
+my $climdivs = get_climdivs(\$grid);
+
+# --- Write climate divisions data to file ---
+
+open(OUTPUT,'>',"$output/$output_file") or die "Could not open $output/$output_file for writing - exiting";
+print OUTPUT join('|','STCD',$output_desc)."\n";
+my @divs = sort { $a <=> $b } keys %{$climdivs};
+foreach my $div (@divs) { print OUTPUT join('|',$div,$climdivs->{$div})."\n"; }
+
+print "\n$output/$output_file written!\n";
 
 exit 0;
 
