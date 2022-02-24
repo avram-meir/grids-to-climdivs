@@ -5,7 +5,9 @@
 file=$APP_PATH/config/sample.grid
 template=$APP_PATH/lib/grib2/global-6th-degree.template.grb
 regrid=1
+ngrids=6
 
 [output]
-file=sample.climdivs
-description=Global Temperature Data
+grids=1,3,5
+files=sample.tmax.climdivs,sample.tmin.climdivs,sample.tave.climdivs
+descriptions=TMAX,TMIN,TAVE
