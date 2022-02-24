@@ -136,12 +136,14 @@ unless(-d $output) { mkpath($output) or die "Could not create directory $output 
 
 my $config_params  = Config::Simple->new($config);
 my $input_file     = $config_params->param("input.file");
-my $input_regrid   = $config_params->param("input.regrid");
 my $input_template = $config_params->param("input.template");
-my $output_file    = $config_params->param("output.file");
-my $output_desc    = $config_params->param("output.description");
+my $input_regrid   = $config_params->param("input.regrid");
+my $input_ngrids   = $config_params->param("input.ngrids");
+my @output_grids   = $config_params->param("output.grids");
+my @output_files   = $config_params->param("output.files");
+my @output_descs   = $config_params->param("output.descriptions");
 
-# --- List of allowed variables in the config file ---
+# --- List of allowed variables that can be in the config file ---
 
 my %allowed_vars = (
 	APP_PATH => "$script_path..",
@@ -149,60 +151,96 @@ my %allowed_vars = (
 	DATA_OUT => $ENV{DATA_OUT},
 );
 
-# --- Parse any allowed variables in the config file params ---
+# --- Parse allowed variables and date wildcards in the config file params ---
 
-$input_file     =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
-$input_regrid   =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
-$input_template =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
-$output_file    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
-$output_desc    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+my $output_grids = join(',',@output_grids);
+my $output_files = join(',',@output_files);
+my $output_descs = join(',',@output_descs);
 
-if($input_file =~ /illegal000BLORT000illegal/ or $input_regrid =~ /illegal000BLORT000illegal/ or $input_template =~ /illegal000BLORT000illegal/ or $output_file =~ /illegal000BLORT000illegal/ or $output_desc =~ /illegal000BLORT000illegal/) {
-	die "Illegal variable(s) found in $config - exiting";
+foreach ($input_file,$input_template,$input_regrid,$input_ngrids,$output_grids,$output_files,$output_descs) {
+	$_     =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+	if($_  =~ /illegal000BLORT000illegal/) { die "Illegal variable(s) found in $config - exiting"; }
+	$_     = $day->printf($_);
 }
 
-# --- Parse any date wildcards in the config file params ---
+@output_grids = split(',',$output_grids);
+@output_files = split(',',$output_files);
+@output_descs = split(',',$output_descs);
 
-$input_file        = $day->printf($input_file);
-$input_template    = $day->printf($input_template);
-$output_file       = $day->printf($output_file);
-$output_desc       = $day->printf($output_desc);
+# --- Parse list params and perform sanity checks ---
 
-print "\n";
-print "Input file:     $input_file\n";
-print "Input template: $input_template\n";
-print "Regrid:         $input_regrid\n";
-print "Output file:    $output_file\n";
-print "Output desc:    $output_desc\n";
+unless($input_ngrids eq int($input_ngrids) and $input_ngrids > 0) { die "Invalid input::ngrids param in $config - exiting"; }
+unless(scalar(@output_grids) <= $input_ngrids) { die "The param output::grids must be less than or equal to input::ngrids - exiting"; }
+unless(scalar(@output_grids) == scalar(@output_files) and scalar(@output_grids) == scalar(@output_descs)) { die "The number of elements in output::grids, output::files and output::descriptions must match - exiting"; }
 
-# --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
+# --- FUTURE FEATURE: Remove Fortran-style headers from the input file if needed ---
 
-my $temp_dir     = File::Temp->newdir();
-my $input_regrid = File::Temp->new(DIR => $temp_dir);
-my $regrid_file  = $input_regrid->filename;
+# Add code to do it here! Would need to indicate something in the config file.
 
-if($input_regrid) {
-	regrid($input_template,$input_file,$regrid_file);
-	$input_file      = $regrid_file;
+# --- FUTURE FEATURE: Allow customization of wgrib2 args such as input_ieee, big_endian, etc. ---
+
+# Add code to do it here!
+
+# --- Split the input file into ngrids pieces ---
+
+# This is assumes the input file is pure unformatted binary so that it'll divide evenly into input_ngrids pieces
+
+my $split_dir = File::Temp->newdir();
+
+open(SPLIT, "split -n $input_ngrids --verbose $input_file $split_dir/input 2>&1 |") or die "Could not split $input_file into separate grids - $! - exiting";
+
+my @input_files;
+
+while (<SPLIT>) {
+	if ( /^creating file \'(.*)'$/ ) {
+		push(@input_files, $1);
+	}
+	else {
+		warn "Warning: this output line from split was not parsed: $_";
+	}
 }
 
-# --- Convert the gridded data to the climate divisions ---
+close(SPLIT);
 
-open(GRID,'<',$input_file) or die "Could not open binary data file $input_file - exiting";
-binmode(GRID);
-my $grid = join('',<GRID>);
-close(GRID);
+# --- Loop through the desired output grids ---
 
-my $climdivs = get_climdivs(\$grid);
+my $counter = 0;
 
-# --- Write climate divisions data to file ---
+foreach my $output_grid (@output_grids) {
+	print "Working on output grid # $output_grid\n";
+	my $input_fn   = $input_files[$output_grid-1];
 
-open(OUTPUT,'>',"$output/$output_file") or die "Could not open $output/$output_file for writing - exiting";
-print OUTPUT join('|','STCD',$output_desc)."\n";
-my @divs = sort { $a <=> $b } keys %{$climdivs};
-foreach my $div (@divs) { print OUTPUT join('|',$div,$climdivs->{$div})."\n"; }
+	# --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
 
-print "\n$output/$output_file written!\n";
+	my $regrid_dir = File::Temp->newdir();
+	my $regrid_fh  = File::Temp->new(DIR => $regrid_dir);
+	my $regrid_fn  = $regrid_fh->filename;
+
+	if($input_regrid) {
+		regrid($input_template,$input_fn,$regrid_fn);
+		$input_fn = $regrid_fn;
+	}
+
+	# --- Convert the gridded data to the climate divisions ---
+
+	open(GRID,'<',$input_fn) or die "Could not open binary data file $input_fn - exiting";
+	binmode(GRID);
+	my $grid = join('',<GRID>);
+	close(GRID);
+
+	my $climdivs = get_climdivs(\$grid);
+
+	# --- Write climate divisions data to file ---
+	
+	my $output_file = "$output/".$output_files[$counter];
+	open(OUTPUT,'>',$output_file) or die "Could not open file in $output_file for writing - exiting";
+	print OUTPUT join('|','STCD',$output_descs[$counter])."\n";
+	my @divs = sort { $a <=> $b } keys %{$climdivs};
+	foreach my $div (@divs) { print OUTPUT join('|',$div,$climdivs->{$div})."\n"; }
+
+	print "\n$output_file written!\n";
+	$counter++;
+}
 
 exit 0;
 
