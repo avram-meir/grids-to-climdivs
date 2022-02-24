@@ -177,10 +177,11 @@ print "Output desc:    $output_desc\n";
 
 # --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
 
+my $temp_dir     = File::Temp->newdir();
+my $input_regrid = File::Temp->new(DIR => $temp_dir);
+my $regrid_file  = $input_regrid->filename;
+
 if($input_regrid) {
-	my $temp_dir     = File::Temp->newdir();
-	my $input_regrid = File::Temp->new(DIR => $temp_dir);
-	my $regrid_file  = $input_regrid->filename;
 	regrid($input_template,$input_file,$regrid_file);
 	$input_file      = $regrid_file;
 }
