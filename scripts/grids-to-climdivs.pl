@@ -135,6 +135,8 @@ unless(-d $output) { mkpath($output) or die "Could not create directory $output 
 my $config_params  = Config::Simple->new($config);
 my $input_file     = $config_params->param("input.file");
 my $input_template = $config_params->param("input.template");
+my $input_endian   = lc($config_params->param("input.byteorder"));
+my $input_missing  = $config_params->param("input.missing");
 my $input_regrid   = $config_params->param("input.regrid");
 my $input_ngrids   = $config_params->param("input.ngrids");
 my @output_grids   = $config_params->param("output.grids");
@@ -170,6 +172,7 @@ foreach ($input_file,$input_template,$input_regrid,$input_ngrids,$output_grids,$
 unless($input_ngrids eq int($input_ngrids) and $input_ngrids > 0) { die "Invalid input::ngrids param in $config - exiting"; }
 unless(scalar(@output_grids) <= $input_ngrids) { die "The param output::grids must be less than or equal to input::ngrids - exiting"; }
 unless(scalar(@output_grids) == scalar(@output_files) and scalar(@output_grids) == scalar(@output_descs)) { die "The number of elements in output::grids, output::files and output::descriptions must match - exiting"; }
+unless($input_endian eq 'big_endian' or $input_endian eq 'little_endian') { die "The param input::byteorder is invalid - exiting"; }
 
 # --- FUTURE FEATURE: Remove Fortran-style headers from the input file if needed ---
 
@@ -216,7 +219,7 @@ foreach my $output_grid (@output_grids) {
 	my $regrid_fn  = $regrid_fh->filename;
 
 	if($input_regrid) {
-		regrid($input_template,$input_fn,$regrid_fn);
+		regrid($input_template,$input_fn,$input_endian,$input_missing,$regrid_fn);
 		$input_fn = $regrid_fn;
 	}
 

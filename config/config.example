@@ -4,6 +4,10 @@
 [input]
 file=$APP_PATH/config/sample.grid
 template=$APP_PATH/lib/grib2/global-6th-degree.template.grb
+; Options are big_endian or little_endian
+byteorder=little_endian
+; What value does the binary file use for missing data?
+missing=-999.
 regrid=1
 ngrids=6
 
