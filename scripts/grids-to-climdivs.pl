@@ -126,8 +126,6 @@ if($opts_failed) {
 
 }
 
-print $day->printf("The date argument is %Y %m %d")."\n";
-
 # --- Create output directory if needed ---
 
 unless(-d $output) { mkpath($output) or die "Could not create directory $output - exiting"; }
@@ -207,7 +205,8 @@ close(SPLIT);
 my $counter = 0;
 
 foreach my $output_grid (@output_grids) {
-	print "Working on output grid # $output_grid\n";
+	print "Converting grid $output_grid of $input_ngrids to climate divisions\n";
+
 	my $input_fn   = $input_files[$output_grid-1];
 
 	# --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
@@ -236,9 +235,9 @@ foreach my $output_grid (@output_grids) {
 	open(OUTPUT,'>',$output_file) or die "Could not open file in $output_file for writing - exiting";
 	print OUTPUT join('|','STCD',$output_descs[$counter])."\n";
 	my @divs = sort { $a <=> $b } keys %{$climdivs};
-	foreach my $div (@divs) { print OUTPUT join('|',$div,$climdivs->{$div})."\n"; }
+	foreach my $div (@divs) { print OUTPUT join('|',$div,sprintf("%.3f",$climdivs->{$div}))."\n"; }
 
-	print "\n$output_file written!\n";
+	print "$output_file written!\n";
 	$counter++;
 }
 
