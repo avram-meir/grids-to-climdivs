@@ -1,17 +1,40 @@
 ; Sample configuration file for scripts/grids-to-climdivs.pl
-; Last updated 23 Feb 2022
+; Works with the provided sample data file config/sample.grid
+; Last updated 24 Feb 2022
 
 [input]
+
+; Location of the binary data. Use unix date wildcards as needed (e.g., %Y/%m/%d for a date directory)
 file=$APP_PATH/config/sample.grid
+
+; Location of the grib2 template file that defines the dimensions of your binary data
 template=$APP_PATH/lib/grib2/global-6th-degree.template.grb
+
 ; Options are big_endian or little_endian
 byteorder=little_endian
+
 ; What value does the binary file use for missing data?
 missing=-999.
+
+; Set to 1 if the binary data has fortran style headers (4-bytes at the beginning and end of each record), set to 0 if no headers
+headers=0
+
+; Use reverse polish notation to perform unit conversions as needed! This example converts degrees Celsius to Fahrenheit.
+rpn=9:*:5:/:32:+
+
+; If your data do not match the 1/8th degree map file (most don't), set regrid to 1. If they do, set it to 0.
 regrid=1
+
+; How many grid records are in your dataset (e.g., how many vars)?
 ngrids=6
 
 [output]
+
+; Of the ngrids above, which ones do you want to create climdivs data for (comma-separated list)
 grids=1,3,5
+
+; Output filenames for the grids to output? Comma-separated list
 files=sample.tmax.climdivs,sample.tmin.climdivs,sample.tave.climdivs
+
+; Descriptions of the output data to print in the file headers? Comma-separated list
 descriptions=TMAX,TMIN,TAVE

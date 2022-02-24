@@ -70,9 +70,10 @@ BEGIN {
 }
 
 sub regrid {
-	confess "Minimum of 5 arguments are required (template, input, byteorder, missing, output)" unless(@_ >= 5);
+	confess "Minimum of 6 arguments are required (template, input, header, byteorder, missing, output)" unless(@_ >= 5);
 	my $template  = shift;
 	my $input     = shift;
+	my $header    = shift;
 	my $byteorder = shift;
 	my $missing   = shift;
 	my $output    = shift;
@@ -91,7 +92,7 @@ sub regrid {
 	
 	my $grib_orig    = File::Temp->new(DIR => $work_dir);
 	my $grib_orig_fn = $grib_orig->filename;
-	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -no_header -$byteorder -undefine_val $missing$rpn -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
+	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -$header -$byteorder -undefine_val $missing$rpn -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
 	if($error) { confess "Could not import $input into grib2 format"; }
 
 	# --- Regrid datavto 1/8th degree grid ---
