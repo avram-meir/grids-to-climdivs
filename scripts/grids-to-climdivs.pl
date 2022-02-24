@@ -134,16 +134,32 @@ my $output_file    = $config_params->param("output.file");
 
 # --- List of allowed variables in the config file ---
 
-my $APP_PATH       = "$script_path../"
-my $DATA_IN        = ${DATA_IN};       # Would need to have this set as environment variable
-my $DATA_OUT       = ${DATA_OUT};      # Would need to have this set as environment variable
+my %allowed_vars = (
+	APP_PATH => "$script_path..",
+	DATA_IN  => $ENV{DATA_IN},
+	DATA_OUT => $ENV{DATA_OUT},
+);
 
 # --- Parse any allowed variables in the config file params ---
+
+$input_file     =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+$input_template =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+$output_file    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+
+if($input_file =~ /illegal000BLORT000illegal/ or $input_template =~ /illegal000BLORT000illegal/ or $output_file =~ /illegal000BLORT000illegal/) {
+	die "Illegal variable(s) found in $config - exiting";
+}
 
 # --- Parse any date info in the config file params ---
 
 $input_file        = $day->printf($input_file);
+$input_template    = $day->printf($input_template);
 $output_file       = $day->printf($output_file);
+
+print "\n";
+print "Input file:     $input_file\n";
+print "Input template: $input_template\n";
+print "Output file:    $output_file\n";
 
 # --- Do something cool ---
 
