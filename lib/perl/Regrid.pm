@@ -65,7 +65,7 @@ use Exporter;
 my $wgrib2;
 
 BEGIN {
-	$wgrib2 = `which wgrib2`;
+	$wgrib2 = `which wgrib2`; chomp $wgrib2;
 	unless($wgrib2) { confess "Package wgrib2 must be installed on your system"; }
 }
 
@@ -89,7 +89,7 @@ sub regrid {
 	
 	my $grib_orig    = File::Temp->new(DIR => $work_dir);
 	my $grib_orig_fn = $grib_orig->filename;
-	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -undefine_val 9999. $rpn -set_date 19710101 -set_grid_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
+	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -no_header -little_endian -undefine_val 9999. $rpn -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
 	if($error) { confess "Could not import $input into grib2 format"; }
 
 	# --- Regrid datavto 1/8th degree grid ---
