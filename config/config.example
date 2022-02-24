@@ -1,0 +1,11 @@
+; Sample configuration file for scripts/grids-to-climdivs.pl
+; Last updated 23 Feb 2022
+
+[input]
+file=$APP_PATH/config/sample.grid
+template=$APP_PATH/lib/grib2/global-6th-degree.template.grb
+regrid=1
+
+[output]
+file=sample.climdivs
+description=Global Temperature Data
