@@ -70,7 +70,9 @@ printf "Updating from %s to %s\n" $startdate $enddate
 
 cd $(dirname "$0")
 
-datesfile="../dates/${config%.*}"
+cfileroot=${config##*/}
+cfileroot=${cfileroot%.*}
+datesfile="../dates/$cfileroot.list"
 outputdir="${DATA_OUT}/observations/land_air/all_ranges/conus/climate_divisions"
 
 failed=0
@@ -86,7 +88,6 @@ until [ $date -gt $enddate ] ; do
 
 		# --- Update list of dates to run ---
 
-		datesfile="../dates/${config%.*}.list"
 		script="../scripts/update-dates.pl"
 		printf "Updating the list of dates to run: %s\n" $datesfile
 		perl $script -c $config -f $datesfile -o $outputdir
