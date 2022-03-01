@@ -6,26 +6,37 @@ fi
 
 usage() {
 	printf "Usage :\n";
-	printf "   $(basename "$0") date\n";
-	printf "   $(basename "$0") startdate enddate\n";
+	printf "   $(basename "$0") config date\n";
+	printf "   $(basename "$0") config startdate enddate\n";
 }
 
 # --- Get command line args ---
 
 startarg=""
 endarg=""
-if [ "$#" == 2 ] ; then
-        startarg=$1
+if [ "$#" == 3 ] ; then
+	config=$1
+        startarg=$3
+        endarg=$3
+elif [ "$#" == 2 ] ; then
+	config=$1
+        startarg=$2
         endarg=$2
 elif [ "$#" == 1 ] ; then
-        startarg=$1
-        endarg=$1
-elif [ "$#" == 0 ] ; then
+	config=$1
         startarg=$(date +%Y%m%d --date "today")
         endarg=$startarg
 else
         usage >&2
         exit 1
+fi
+
+# --- Validate config arg ---
+
+if [ ! -f $config ] ; then
+	printf "%s does not exist\n" $config >&2
+	usage >&2
+	exit 1
 fi
 
 # --- Validate args as dates ---
@@ -59,6 +70,9 @@ printf "Updating from %s to %s\n" $startdate $enddate
 
 cd $(dirname "$0")
 
+datesfile="../dates/${config%.*}"
+outputdir="${DATA_OUT}/observations/land_air/all_ranges/conus/climate_divisions"
+
 failed=0
 date=$startdate
 
@@ -68,16 +82,64 @@ until [ $date -gt $enddate ] ; do
 
         scriptfailed=0
 
-        # --- Run the perl script and check return value ---
+	if [ $date -eq $enddate ] ; then
 
-	script="../scripts/daily.pl"
+		# --- Update list of dates to run ---
 
-	perl ../scripts/daily.pl -d $date
+		datesfile="../dates/${config%.*}.list"
+		script="../scripts/update-dates.pl"
+		printf "Updating the list of dates to run: %s\n" $datesfile
+		perl $script -c $config -f $datesfile -o $outputdir
 
-        if [ $? -ne 0 ] ; then
-		printf "The script %s failed with exit status %d\n" $script $? >&2
-                ((scriptfailed++))
-        fi
+		if [ $? -ne 0 ] ; then
+			printf "Could not update dates (%s returned error %d)\n" $script $? >&2
+			exit 1
+		fi
+
+		# --- Loop through the updated dates list ---
+
+		faileddates=()
+		printf "Creating climate divisions data for dates on the update list\n"
+
+		while read $fdate; do
+
+			# --- Create climate divisions data for the dates list date ---
+
+			script="../scripts/grids-to-climdivs.pl"
+			perl $script -c $config -d $fdate -o $outputdir
+
+			# --- Store failed date in array ---
+
+			if [ $? -ne 0 ] ; then
+				printf "grids-to-climdivs failed to update %s\n" $fdate
+				faileddates+=( "$fdate" )
+			fi
+
+		done <$datesfile
+
+		# --- Write the failed dates to the dates file (better luck next time!) ---
+
+		if [ ${#faileddates[@]} -ne 0 ]; then
+			printf "Writing failed dates to %s\n" $datesfile
+			printf "%s\n" ${faileddates[@]} > $datesfile
+			((scriptfailed++))
+		fi
+
+	else
+
+		# --- Create climate divisions data for the date ---
+
+		script="../scripts/grids-to-climdivs.pl"
+		perl $script -c $config -d $date -o $outputdir
+
+		# --- Check for errors ---
+
+		if [ $? -ne 0 ] ; then
+			printf "grids-to-climdivs failed to update %s\n" $date
+			((scriptfailed++))
+		fi
+
+	fi
 
         # --- Note errors for this date ---
 
