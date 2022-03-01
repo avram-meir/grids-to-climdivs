@@ -120,7 +120,7 @@ if($err) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"
 
 # --- Validate output argument ---
 
-unless(-d $output) { $opts_failed = join("\n",$opts_failed,"Invalid -output argument: $output - must be a directory"); }
+#unless(-d $output) { $opts_failed = join("\n",$opts_failed,"Invalid -output argument: $output - must be a directory"); }
 
 # --- Process failed options ---
 
