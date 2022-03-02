@@ -150,7 +150,7 @@ if(-s $file) {
 		my $fday = Date::Manip::Date->new();
 		my $err  = $fday->parse($line);
 		if($err) { warn "Skipping invalid date in $file : $line"; }
-		else     { push(@dates,$day->printf("%Y%m%d")); }
+		else     { push(@dates,$fday->printf("%Y%m%d")); }
 	}
 
 }
