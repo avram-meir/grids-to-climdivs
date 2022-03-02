@@ -209,6 +209,8 @@ for(my $d=1; $d<=$period; $d++) {
 
 # --- Print new date list to file ---
 
+my($file_name,$file_path,$file_suffix) = fileparse($file, qr/\.[^.]*/);
+unless(-d $file_path) { mkpath($file_path) or die "Could not create directory $file_path - $! - exiting"; }
 open(FILE,'>',$file) or die "Could not open $file for writing - $! - exiting";
 foreach my $date (@dates) { print FILE "$date\n"; }
 close(FILE);
