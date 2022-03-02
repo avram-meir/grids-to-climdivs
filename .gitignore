@@ -1,6 +1,7 @@
 # Ignore all files in the work and output directories
 work/
 output/
+dates/
 
 # Ignore log files
 logs/
