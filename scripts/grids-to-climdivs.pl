@@ -191,7 +191,7 @@ open(SPLIT, "split -n $input_ngrids --verbose $input_file $split_dir/input 2>&1 
 my @input_files;
 
 while (<SPLIT>) {
-	if ( /^creating file [\'\`](.*)'$/ ) {
+	if ( /^creating file [\'\`](.*)['\`]$/ ) {
 		push(@input_files, $1);
 	}
 	else {
