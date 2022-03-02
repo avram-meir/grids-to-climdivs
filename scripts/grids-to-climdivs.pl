@@ -114,6 +114,8 @@ my $day = Date::Manip::Date->new();
 my $err = $day->parse($date);
 if($err) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"); }
 
+print "Running grids-to-climdivs for ".$day->printf("%Y%m%d")." and $config\n";
+
 # --- Process failed options ---
 
 if($opts_failed) {

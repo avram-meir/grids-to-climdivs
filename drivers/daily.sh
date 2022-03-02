@@ -79,8 +79,8 @@ failed=0
 date=$startdate
 
 until [ $date -gt $enddate ] ; do
-        printf "\nUpdating %s now\n" $date
-	printf "\nDay of the week: %s\n\n" $(date +%a --date $date)
+        #printf "\nUpdating %s now" $date
+	#printf "\nDay of the week: %s\n\n" $(date +%a --date $date)
 
         scriptfailed=0
 
@@ -89,21 +89,23 @@ until [ $date -gt $enddate ] ; do
 		# --- Update list of dates to run ---
 
 		script="../scripts/update-dates.pl"
-		printf "Updating the list of dates to run: %s\n" $datesfile
+		printf "\nRunning %s for automated self-healing\n" $script
+		printf "Any missing days left over from prior runs are expected to be stored in %s\n\n" $datesfile
 		perl $script -c $config -f $datesfile -o $outputdir
 
 		if [ $? -ne 0 ] ; then
-			printf "Could not update dates (%s returned error %d)\n" $script $? >&2
+			printf "\n%s returned an error - exiting\n" $script >&2
 			exit 1
 		fi
+
+		printf "\nDates to update are obtained from %s\n" $datesfile
 
 		# --- Loop through the updated dates list ---
 
 		faileddates=()
-		printf "Creating climate divisions data for dates on the update list\n"
 
 		while read -r fdate; do
-			printf "Updating %s now\n" $fdate
+			printf "\nUpdating %s now\n\n" $fdate
 
 			# --- Create climate divisions data for the dates list date ---
 
@@ -122,15 +124,16 @@ until [ $date -gt $enddate ] ; do
 		# --- Write the failed dates to the dates file (better luck next time!) ---
 
 		if [ ${#faileddates[@]} -ne 0 ]; then
-			printf "Writing failed dates to %s\n" $datesfile
+			printf "\nWriting failed dates to %s to use in the next run\n" $datesfile
 			printf "%s\n" ${faileddates[@]} > $datesfile
 			((scriptfailed++))
 		else
-			printf "No failed dates!\n"
+			printf "\nNo failed dates to write into %s\n" $datesfile
 			printf "" > $datesfile
 		fi
 
 	else
+		printf "\nUpdating %s now\n\n" $date
 
 		# --- Create climate divisions data for the date ---
 
@@ -149,7 +152,7 @@ until [ $date -gt $enddate ] ; do
         # --- Note errors for this date ---
 
         if [ $scriptfailed -ne 0 ] ; then
-                printf "There were %d script errors detected on %s\n" $scriptfailed $date >&2
+                printf "\nThere were %d script errors detected on %s\n" $scriptfailed $date >&2
                 ((failed++))
         fi
 
@@ -159,8 +162,10 @@ done
 # --- Exit script ---
 
 if [ $failed -ne 0 ] ; then
-        printf "There were errors detected on %d days\n" $failed >&2
+        printf "\nThere were errors detected on %d days\n" $failed >&2
         exit 1
+else
+	printf "\nNo runtime errors encountered\n"
 fi
 
 exit 0

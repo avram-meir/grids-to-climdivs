@@ -137,11 +137,13 @@ if($opts_failed) {
 # --- Create a date list and add the date argument to it ---
 
 my @dates;
+print "Adding ".$day->printf("%Y%m%d")." to the list of dates to update\n";
 push(@dates,$day->printf("%Y%m%d"));
 
 # --- Load dates already stored in file if it exists ---
 
 if(-s $file) {
+	print "Checking $file for dates to update\n";
 	open(FILE,'<',$file) or die "Could not open $file for reading - $! - exiting";
 	my @contents = <FILE>; chomp(@contents);
 	close(FILE);
@@ -149,11 +151,17 @@ if(-s $file) {
 	foreach my $line (@contents) {
 		my $fday = Date::Manip::Date->new();
 		my $err  = $fday->parse($line);
+		
 		if($err) { warn "Skipping invalid date in $file : $line"; }
-		else     { push(@dates,$fday->printf("%Y%m%d")); }
+		else     {
+			print "Adding ".$fday->printf("%Y%m%d")." to the list of dates to update\n";
+			push(@dates,$fday->printf("%Y%m%d"));
+		}
+
 	}
 
 }
+else { print "No dates to update were stored in $file\n"; }
 
 # --- Get the output archive details from the config file ---
 
@@ -173,6 +181,8 @@ if($output_files =~ /illegal000BLORT000illegal/) { die "Illegal variable(s) foun
 
 # --- Loop the dates in the period and search for missing/empty files ---
 
+print "Scanning the archive for $period days prior to ".$day->printf("%Y%m%d")." for missing data\n";
+
 for(my $d=1; $d<=$period; $d++) {
 	my $delta       = $day->new_delta();
 	$delta->parse("$d days ago");
@@ -182,7 +192,12 @@ for(my $d=1; $d<=$period; $d++) {
 	
 	foreach my $output_file (@output_files) {
 		$output_file = $archive_day->printf($output_file);
-		unless(-s "$output/$output_file") { push(@dates,$archive_day->printf("%Y%m%d")); }
+
+		unless(-s "$output/$output_file") {
+			print "Adding ".$archive_day->printf("%Y%m%d")." to the list of dates to update\n";
+			push(@dates,$archive_day->printf("%Y%m%d"));
+		}
+
 	}
 
 }
@@ -197,6 +212,7 @@ for(my $d=1; $d<=$period; $d++) {
 open(FILE,'>',$file) or die "Could not open $file for writing - $! - exiting";
 foreach my $date (@dates) { print FILE "$date\n"; }
 close(FILE);
+print "Dates to update written to $file\n";
 
 exit 0;
 
