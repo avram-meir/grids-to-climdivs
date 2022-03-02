@@ -12,16 +12,17 @@ usage() {
 
 # --- Get command line args ---
 
+config=""
 startarg=""
 endarg=""
 if [ "$#" == 3 ] ; then
 	config=$1
-        startarg=$3
+        startarg=$2
         endarg=$3
 elif [ "$#" == 2 ] ; then
 	config=$1
         startarg=$2
-        endarg=$2
+        endarg=$startarg
 elif [ "$#" == 1 ] ; then
 	config=$1
         startarg=$(date +%Y%m%d --date "today")
