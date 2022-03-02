@@ -73,7 +73,7 @@ cd $(dirname "$0")
 cfileroot=${config##*/}
 cfileroot=${cfileroot%.*}
 datesfile="../dates/$cfileroot.list"
-outputdir="${DATA_OUT}/observations/land_air/all_ranges/conus/climate_divisions"
+outputdir="../output"
 
 failed=0
 date=$startdate
@@ -102,7 +102,8 @@ until [ $date -gt $enddate ] ; do
 		faileddates=()
 		printf "Creating climate divisions data for dates on the update list\n"
 
-		while read $fdate; do
+		while read -r fdate; do
+			printf "Updating %s now\n" $fdate
 
 			# --- Create climate divisions data for the dates list date ---
 
@@ -116,7 +117,7 @@ until [ $date -gt $enddate ] ; do
 				faileddates+=( "$fdate" )
 			fi
 
-		done <$datesfile
+		done < $datesfile
 
 		# --- Write the failed dates to the dates file (better luck next time!) ---
 
@@ -124,6 +125,9 @@ until [ $date -gt $enddate ] ; do
 			printf "Writing failed dates to %s\n" $datesfile
 			printf "%s\n" ${faileddates[@]} > $datesfile
 			((scriptfailed++))
+		else
+			printf "No failed dates!\n"
+			printf "" > $datesfile
 		fi
 
 	else
