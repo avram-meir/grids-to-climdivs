@@ -59,6 +59,7 @@ use Scalar::Util qw(blessed looks_like_number openhandle);
 use Pod::Usage;
 use Date::Manip;
 use Config::Simple;
+use utf8;
 
 # --- Identify script ---
 
