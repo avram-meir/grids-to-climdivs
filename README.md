@@ -2,6 +2,8 @@
 
 Create 344 climate divisions data for the contiguous United States using gridded input datasets.
 
+<img src="https://user-images.githubusercontent.com/94878449/156598379-08ecd22f-8ead-471b-8332-e132c8650a96.png" align="center" width="500">
+
 ## About
 
 Some of the longest record climate datasets for the contiguous United States utilize the [344 climate divisions](https://www.ncdc.noaa.gov/monitoring-references/maps/conus-climate-divisions) as their geographical reference. Example products include:
