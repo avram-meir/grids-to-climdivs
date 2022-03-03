@@ -40,34 +40,48 @@ In addition to [Perl 5](https://www.perl.org/get.html), the following modules fr
 
 Most Linux distributions include these modules in their package repositories.
 
-For Debian/Ubuntu based distributions, try: `sudo apt install libdate-manip-perl libconfig-simple-perl liblist-moreutils-perl`
+For example, in Debian/Ubuntu based distributions, try: `sudo apt install libdate-manip-perl libconfig-simple-perl liblist-moreutils-perl`
 
-For Fedora/RedHat, try: `sudo cpan install Date::Manip ; sudo cpan install Config::Simple ; sudo cpan install List::MoreUtils`
+You can also install these packages using Perl's `cpan` utility, e.g., 
+
+`sudo cpan -i Date::Manip`
+`sudo cpan -i Config::Simple`
+`sudo cpan -i List::MoreUtils`
+
+See: [cpan](https://perldoc.perl.org/cpan) for more information, including using [local::lib](https://metacpan.org/pod/local::lib) if you don't have sudo access.
 
 #### Install wgrib2
 
 The wgrib2 utility must be compiled and installed on your system. Detailed instructions can be found here: [wgrib2 compile questions](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/compile_questions.html). There are some available pre-compiled versions of wgrib2, but only for specific systems, and YMMV.
 
-Precompiled wgrib2 binaries for download:
+Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 
 * [OpenGrads: Darwin, Freebsd, Linux, Windows(cygwin)](https://opengrads.org/)
 * [Fedora Project](https://fedoraproject.org)
 * [RPMs: Centros, Fedora, OpenSUSE, RedHat, SUSE](https://download.opensuse.org/repositories/home:/gbvalor/)
 * [MacPorts](https://trac.macports.org/browser/trunk/dports/science/wgrib2/Portfile)
 
-### Installation
+### Install grids-to-climdivs
 
 1. Clone the repo:
   ```git clone git@github.com:[name]/[project-name-here]```
-2. List what else you need to do to install
+2. Complete the installation using [GNU Make](https://www.gnu.org/software/make/):
+  ```
+  cd grids-to-climdivs
+  make install
+  ```
 
 ## Usage
 
-Describe how to use your project or application and give examples.
+### Configuration files
+
+### Perl scripts
+
+### Driver script
 
 ## Roadmap
 
-See the [open issues](https://github.com/[name]/[project-name-here]/issues) for a list of proposed features and reported problems.
+See the [open issues](https://github.com/avram-meir/grids-to-climdivs/issues) for a list of proposed features and reported problems.
 
 ## Contributing
 
@@ -81,4 +95,4 @@ Any contributions you make are **greatly appreciated**.
 
 ## Contact
 
-Your Name - [Email](mailto:your.email@noaa.gov)
+Adam Allgood - [Email](mailto:avram.meir@noaa.gov)
