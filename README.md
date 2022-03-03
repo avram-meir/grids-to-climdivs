@@ -77,6 +77,62 @@ Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 
 ### Configuration files
 
+To define the gridded input files and compute climate divisions output files from those data, grids-to-climdivs uses configuration files in ["INI" format](https://metacpan.org/pod/Config::Simple#INI-FILE) that hold all of the needed information. A [sample configuration file](config/config.example) is provided that can be used as a starting point to create new configuration files for your input data. The sample config file works with a sample gridded data file provided in the same directory, which is useful for testing the software functionality on your system. This is the sample configuration file:
+
+```
+; Sample configuration file for scripts/grids-to-climdivs.pl
+; Works with the provided sample data file config/sample.grid
+
+[input]
+file=$APP_PATH/config/sample.grid
+ngrids=6
+regrid=1
+template=$APP_PATH/lib/grib2/global-6th-degree.template.grb
+byteorder=little_endian
+missing=-999.
+headers=0
+rpn=9:*:5:/:32:+
+
+[output]
+grids=1,3,5
+files=sample.tmax.climdivs,sample.tmin.climdivs,sample.tave.climdivs
+descriptions=TMAX,TMIN,TAVE
+```
+
+A description of each of these parameters follows.
+
+#### Input
+
+`file` This is the full path and name of the gridded input data file to use. Date information included in the path can be specified using [Linux date wildcards](https://man7.org/linux/man-pages/man1/date.1.html). For example, to specify year, month, and day directories, use `%Y/%m/%d`. The actual date to use is set by the script [grids-to-climdivs.pl](scripts/grids-to-climdivs.pl) using the `--date` option. Additionally, three variables can optionally be used as a part of the value:
+
+* `$DATA_IN` - if your input data is located in some centralized data storage mount or directory, you can `export DATA_IN=/path/to/storage` to make things easier
+* `$DATA_OUT` - useful for defining a location where your own output data are written to, e.g., `export DATA_OUT=${HOME}/data`
+* `$APP_PATH` - not an environment variable, this will be set to the path where this software is installed by grids-to-climdivs.pl
+
+`ngrids` Many gridded binary data files have more than one grid stored in them. Specify the number of grids using this parameter. The grids-to-climdivs.pl script will split the input data file into `ngrids` pieces and can then compute climate divisional values for each grid separately. Which grids to output can be defined by the `grids` options below.
+
+`regrid` If your gridded dataset does not match the exact dimensions of [the 0.125 degree/climate divisions map](lib/map/GridToClimdivs.map), then set this value to 1, because the data must be regridded to match the map. This regridding is done by the wgrib2 software by converting the grids into grib2 format, performing the regrid, and then writing out the regridded data to a temporary output file read by grids-to-climdivs.pl. If your data are already 0.125 degree and match the map dimensions, this parameter can be set to 0.
+
+The following five parameters provide information used by wgrib to regrid the input data. Therefore, if `regrid=0`, they are not necessary.
+
+`template` Path to a grib2 file with grid spatial dimensions that match your input dataset. The data in this file do not matter as it is simply used as a template by wgrib2 to translate the binary input data into grib2 format.
+
+`byteorder` Set to `big-endian` or `little-endian` depending on the byte order of the input dataset. See [this Wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information.
+
+`missing` Use this parameter to set what the missing value is in your dataset.
+
+`headers` Binary data created by Fortran sometimes include headers that define the chunk size of the binary data. These headers take up one byte at the beginning of the record, and one at the end. If these headers are present, set this value to 1. If the input data are purely unformatted binary, set this value to 0.
+
+`rpn` Optionally provide a unit conversion for the gridded data, as wgrib2 can do this quickly. An example is converting degrees Celsius to degrees Fahrenheit: `rpn=9:*:5:/:32:+`. See [wgrib -rpn](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/rpn.html) for more information.
+
+#### Output
+
+`grids` Given `ngrids` defined above, specify which of these grid(s) you want to create climate divisions data for. For example, if your input data file contains six grids and you want to create climate divisions data for the first, third, and fifth grids, set `grids=1,3,5`. Values must be comma-delimited.
+
+`files` Provide the output filenames for each of the climate divisions data files to be created. The number of filenames provided should match the number of `ngrids`. Date wildcards and the three allowed variables can be used. Note that the script grids-to-climdivs.pl takes an `--output` argument set to the output directory where files should be written. Therefore, the path/filename provided here should be relative to the path provided by the `--output` option. Values must be comma-delimited.
+
+`descriptions` Provide a brief description of the data, and this will be printed as a header line in the climate divisions output data. Provide one description for each grid that is output. Values must be comma-delimited.
+
 ### Perl scripts
 
 ### Driver script
