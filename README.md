@@ -197,6 +197,49 @@ Usage:
 
 ### Driver script
 
+The driver script `drivers/daily.sh` is a bash shell script intended to help run grids-to-climdivs in an automated sense, e.g., on a cron job, or to generate a large archive. The script takes three positional arguments: `./daily.pl config startdate enddate`
+
+`config` This is the configuration file describing the input grids to use and output data files to create.
+
+`startdate` For long archive creation, this is the start date to begin creating climate divisions data.
+
+`enddate` This is the ending date, or the last date to create climate divisions data. When the driver script hits this end date, it will also run update-dates.pl to attempt to backfill anything missed. The default period is 30 days; reset this in the script if you want it shorter or longer.
+
+The `config` argument is required. If only one date argument is provided, both `startdate` and `enddate` will be set to it (e.g., only that date will be run, and update-dates.pl will be run). If no date arguments are supplied, both `startdate` and `enddate` will be set to yesterday's date based on the system clock.
+
+## Output Data
+
+To create a sample output file (and a good way to test the software to make sure it works on your system!), `cd` into the application directory and run the following: `perl scripts/grids-to-climdivs.pl -c config/config.example -o output`. This should result in output to the terminal that looks like:
+
+```
+Running grids-to-climdivs for [yesterday] and config/config.example
+Converting grid 1 of 6 to climate divisions
+output/sample.tmax.climdivs written!
+Converting grid 3 of 6 to climate divisions
+output/sample.tmin.climdivs written!
+Converting grid 5 of 6 to climate divisions
+output/sample.tave.climdivs written!
+```
+
+If you see that, then you're in good shape! Now run: `head output/sample.tmax.climdivs`. You should see the top few lines of one of the created climate division data files:
+
+```
+STCD|TMAX
+101|55.823
+102|56.514
+103|58.756
+104|57.856
+105|57.742
+106|60.745
+107|63.113
+108|63.514
+201|56.982
+```
+
+Data are pipe (|) delimited. The first line of this file is the header line, and STCD means "state number and climate division number". A table defining these states and divisions can be found [here](https://ftp.cpc.ncep.noaa.gov/htdocs/degree_days/weighted/daily_data/regions/ClimateDivisions.txt). TMAX is what the corresponding `descriptions` parameter was set to in the config file. Here it means maximum temperature.
+
+Note that for this sample case, the default date of yesterday does not matter.
+
 ## Roadmap
 
 See the [open issues](https://github.com/avram-meir/grids-to-climdivs/issues) for a list of proposed features and reported problems.
