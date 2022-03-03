@@ -181,6 +181,10 @@ unless($input_endian eq 'big_endian' or $input_endian eq 'little_endian') { die 
 my $headers = 'no_header';
 if($input_headers) { $headers = 'header'; }
 
+# --- Check that input file exists ---
+
+unless(-s $input_file) { die "Binary input file $input_file not found - exiting"; }
+
 # --- Split the input file into ngrids pieces ---
 
 # This is assumes the input file is pure unformatted binary so that it'll divide evenly into input_ngrids pieces
@@ -237,6 +241,8 @@ foreach my $output_grid (@output_grids) {
 	# --- Write climate divisions data to file ---
 	
 	my $output_file = "$output/".$output_files[$counter];
+	my($output_name,$output_path,$output_suffix) = fileparse($output_file, qr/\.[^.]*/);
+	unless(-d $output_path) { mkpath $output_path or die "Could not create directory $output_path - $! - exiting"; }
 	open(OUTPUT,'>',$output_file) or die "Could not open file in $output_file for writing - exiting";
 	print OUTPUT join('|','STCD',$output_descs[$counter])."\n";
 	my @divs = sort { $a <=> $b } keys %{$climdivs};
