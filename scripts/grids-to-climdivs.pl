@@ -193,8 +193,7 @@ my @input_files;
 while (<SPLIT>) {
 	if ( /^creating file (.*)$/ ) {
 		my $split_file = $1;
-		$split_file    = substr($split_file,1);    # Remove the first quote-char (different on different systems
-		$split_file    = substr($split_file,0,-1); # Remove the last quote-char (different on different systems
+		$split_file    =~ s/[\p{Pi}\p{Pf}'"]//g;  # Remove every type of quotation mark
 		push(@input_files, $split_file);
 	}
 	else {
