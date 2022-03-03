@@ -135,6 +135,66 @@ The following five parameters provide information used by wgrib to regrid the in
 
 ### Perl scripts
 
+#### grids-to-climdivs.pl
+
+This is the main script of the application. It optionally takes a date argument, the configuration file described above, and an output argument set to the directory where climate divisions data will be written. The script then computes the requested climate divisions data, using wgrib2 to regrid the input data as necessary. The full command line options are:
+
+```
+Usage:
+     grids-to-climdivs.pl [-c|-d|-o]
+     grids-to-climdivs.pl -h
+     grids-to-climdivs.pl -man
+
+     [OPTION]            [DESCRIPTION]                                    [VALUES]
+
+     -config, -c         Configuration file containing information        filename
+                         describing the input dataset and output 
+                         filename
+     -date, -d           Date argument                                    YYYYMMDD
+     -help, -h           Print usage message and exit
+     -manual, -man       Display script documentation
+     -output, -o         Output directory where the climate divisions 
+                         data will be written. Default location if none 
+                         supplied is ../work
+```
+
+#### update-dates.pl
+
+This script is utilized by the driver script, and is intended to provide self-healing capabilities when this application is run on cron to update date-based climate divisions archives. It takes a date argument, a period argument (a number of days prior to the date argument), the config file argument, a (date list) file argument, and the output directory of the climate divisions archive argument. The script then:
+
+1. Adds the date arg to a list of dates to update
+2. Checks the file argument for a list of dates that may be left over from previous runs and adds those dates to the list of dates to update
+3. Scans the archive for `period` days ending on `date` for missing or empty data files, and if any are found, adds those corresponding dates to the list.
+4. The list of dates is sorted and culled of duplicate dates, then written to `file`.
+
+The driver script can then read the resulting list of dates and attempt to update the climate divisions archive for those dates.
+
+The full command line options are:
+
+```
+Usage:
+     update-dates.pl [-c|-d|-f|-p]
+     update-dates.pl -h
+     update-dates.pl -man
+
+     [OPTION]            [DESCRIPTION]                                    [VALUES]
+
+     -config, -c         Configuration file containing information        filename
+                         describing the grids-to-climdivs output 
+                         filename
+     -date, -d           Date argument                                    YYYYMMDD
+     -help, -h           Print usage message and exit
+     -file, -f           Filename containing list of dates. If none 
+                         exists yet, one will be created
+     -manual, -man       Display script documentation
+     -output, -o         Output directory where the climate divisions 
+                         data are located. Default location if none 
+                         supplied is ../work
+     -period, -p         Number of days prior to the date supplied by     Positive int
+                         the -d argument to scan for missing 
+                         grids-to-climdivs output files
+```
+
 ### Driver script
 
 ## Roadmap
