@@ -25,3 +25,4 @@ permissions:
 dirs:
 	mkdir -p ./logs
 	mkdir -p ./work
+	mkdir -p ./dates
