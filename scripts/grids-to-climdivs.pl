@@ -191,8 +191,11 @@ open(SPLIT, "split -n $input_ngrids --verbose $input_file $split_dir/input 2>&1 
 my @input_files;
 
 while (<SPLIT>) {
-	if ( /^creating file [\'\`](.*)['\`]$/ ) {
-		push(@input_files, $1);
+	if ( /^creating file (.*)$/ ) {
+		my $split_file = $1;
+		$split_file    = substr($split_file,1);    # Remove the first quote-char (different on different systems
+		$split_file    = substr($split_file,0,-1); # Remove the last quote-char (different on different systems
+		push(@input_files, $split_file);
 	}
 	else {
 		warn "Warning: this output line from split was not parsed: $_";
