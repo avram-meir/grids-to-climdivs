@@ -195,6 +195,7 @@ while (<SPLIT>) {
 	if ( /^creating file (.*)$/ ) {
 		my $split_file = $1;
 		$split_file    =~ s/[\p{Pi}\p{Pf}'"]//g;  # Remove every type of quotation mark
+		$split_file    =~ s/[^[:ascii:]]//g;      # Remove non-ascii characters
 		push(@input_files, $split_file);
 	}
 	else {
