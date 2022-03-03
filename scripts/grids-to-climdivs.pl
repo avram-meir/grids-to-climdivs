@@ -181,6 +181,10 @@ unless($input_endian eq 'big_endian' or $input_endian eq 'little_endian') { die 
 my $headers = 'no_header';
 if($input_headers) { $headers = 'header'; }
 
+# --- Check that input file exists ---
+
+unless(-s $input_file) { die "Binary input file $input_file not found - exiting"; }
+
 # --- Split the input file into ngrids pieces ---
 
 # This is assumes the input file is pure unformatted binary so that it'll divide evenly into input_ngrids pieces
