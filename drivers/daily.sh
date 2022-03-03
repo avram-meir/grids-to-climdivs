@@ -74,7 +74,7 @@ cd $(dirname "$0")
 cfileroot=${config##*/}
 cfileroot=${cfileroot%.*}
 datesfile="../dates/$cfileroot.list"
-outputdir="../output"
+outputdir="${DATA_OUT}/observations/land_air/all_ranges/conus/climate_divisions_344"
 
 failed=0
 date=$startdate
