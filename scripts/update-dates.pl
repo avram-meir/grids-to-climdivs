@@ -183,6 +183,8 @@ if($output_files =~ /illegal000BLORT000illegal/) { die "Illegal variable(s) foun
 
 print "Scanning the archive for $period days prior to ".$day->printf("%Y%m%d")." for missing data\n";
 
+my $missing_found = 0;
+
 for(my $d=1; $d<=$period; $d++) {
 	my $delta       = $day->new_delta();
 	$delta->parse("$d days ago");
@@ -196,11 +198,15 @@ for(my $d=1; $d<=$period; $d++) {
 		unless(-s "$output/$output_file") {
 			print "Adding ".$archive_day->printf("%Y%m%d")." to the list of dates to update\n";
 			push(@dates,$archive_day->printf("%Y%m%d"));
+            $missing_found++;
 		}
 
 	}
 
 }
+
+if($missing_found) { print "Found $missing_found missing daily files\n"; }
+else               { print "No missing data found\n";                    }
 
 # --- Cull duplicate dates from the list and sort dates ---
 
