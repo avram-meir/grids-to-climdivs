@@ -92,7 +92,7 @@ until [ $date -gt $enddate ] ; do
 		script="../scripts/update-dates.pl"
 		printf "\nRunning %s for automated self-healing\n" $script
 		printf "Any missing days left over from prior runs are expected to be stored in %s\n\n" $datesfile
-		perl $script -c $config -f $datesfile -o $outputdir
+		perl $script -c $config -d $date -f $datesfile -o $outputdir
 
 		if [ $? -ne 0 ] ; then
 			printf "\n%s returned an error - exiting\n" $script >&2
