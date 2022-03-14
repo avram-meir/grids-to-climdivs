@@ -25,7 +25,7 @@ elif [ "$#" == 2 ] ; then
         endarg=$startarg
 elif [ "$#" == 1 ] ; then
 	config=$1
-        startarg=$(date +%Y%m%d --date "today")
+        startarg=$(date +%Y%m%d --date "yesterday")
         endarg=$startarg
 else
         usage >&2
