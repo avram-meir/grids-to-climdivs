@@ -51,6 +51,8 @@ Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 * [RPMs: Centros, Fedora, OpenSUSE, RedHat, SUSE](https://download.opensuse.org/repositories/home:/gbvalor/)
 * [MacPorts](https://trac.macports.org/browser/trunk/dports/science/wgrib2/Portfile)
 
+This application was developed and tested using wgrib2 v3.1.0.
+
 ### Install grids-to-climdivs
 
 1. Clone the repo:
