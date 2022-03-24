@@ -34,23 +34,11 @@ The grids-to-climdivs application relies on other software that needs to be inst
 
 #### Install CPAN Modules
 
-In addition to [Perl 5](https://www.perl.org/get.html), the following modules from CPAN must be installed on your system:
+See [Installing Perl Modules](http://www.cpan.org/modules/INSTALL.html) for more information about installing packages from CPAN.
 
 * [Date::Manip](https://metacpan.org/pod/Date::Manip)
 * [Config::Simple](https://metacpan.org/pod/Config::Simple)
 * [List::MoreUtils](https://metacpan.org/pod/List::MoreUtils)
-
-Most Linux distributions include these modules in their package repositories.
-
-For example, in Debian/Ubuntu based distributions, try: `sudo apt install libdate-manip-perl libconfig-simple-perl liblist-moreutils-perl`
-
-You can also install these packages using Perl's `cpan` utility, e.g., 
-
-`sudo cpan -i Date::Manip`
-`sudo cpan -i Config::Simple`
-`sudo cpan -i List::MoreUtils`
-
-See: [cpan](https://perldoc.perl.org/cpan) for more information, including using [local::lib](https://metacpan.org/pod/local::lib) if you don't have sudo access.
 
 #### Install wgrib2
 
@@ -66,7 +54,7 @@ Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 ### Install grids-to-climdivs
 
 1. Clone the repo:
-  ```git clone git@github.com:[name]/[project-name-here]```
+  ```git clone git@github.com:avram-meir/grids-to-climdivs.git```
 2. Complete the installation using [GNU Make](https://www.gnu.org/software/make/):
   ```
   cd grids-to-climdivs
