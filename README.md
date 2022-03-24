@@ -54,7 +54,7 @@ Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 ### Install grids-to-climdivs
 
 1. Clone the repo:
-  ```git clone git@github.com:[name]/[project-name-here]```
+  ```git clone git@github.com:avram-meir/grids-to-climdivs.git```
 2. Complete the installation using [GNU Make](https://www.gnu.org/software/make/):
   ```
   cd grids-to-climdivs
