@@ -6,19 +6,27 @@ package GridToClimdivs;
 
 =head1 NAME
 
-GridToClimdivs - Converts 1/8th degree gridded data to the 344 U.S. climate divisions
+GridToClimdivs - Converts gridded data to the 363 U.S. climate divisions
 
 =head1 SYNOPSIS
 
- use GridToClimdivs qw(get_climdivs);
+ use GridToClimdivs;
  
- BEGIN { $GridToClimdivs::mapfile = "/path/to/mapfile"; }
- my $binary_data_file     = "/some/path/to/data/file";
- open($fh,'<',$binary_data_file);
- binmode($fh);
- my $data_str             = join('',<$fh>);
- my $climdivs             = get_climdivs(\$data_str);
- print "The value for the Northern Valley division in Alabama is: ".$climdivs->{101};
+ my $climdivs = GridToClimdivs->new();
+ my $grid0.125deg         = "/path/to/binary/data";
+ my $grid0.1667deg        = "/path/to/other/binary/data";
+ open($fh1,'<',$grid0.125deg);
+ binmode($fh1);
+ my $conus_grid           = join('',<$fh1>);
+ close($fh1);
+ $climdivs->set_conus_data($conus_grid);
+ open($fh2,'<',$grid0.1667deg);
+ binmode($fh2);
+ my $akhi_grid            = join('',<$fh2>);
+ close($fh2);
+ $climdivs->set_akhi_data($akhi_grid);
+ my $climdivs_data        = $climdivs->get_data();
+ print "The value for the NORTHERN VALLEY division in Alabama is: ".$climdivs->{"AL01"};
 
 =head1 DESCRIPTION
 
@@ -39,13 +47,8 @@ This documentation was last updated on: 03FEB2022
 use strict;
 use warnings;
 use Carp qw(carp croak cluck confess);
-use Scalar::Util qw(looks_like_number);
+use Scalar::Util qw(blessed looks_like_number);
 use File::Basename qw(fileparse basename);
-use vars qw(@ISA @EXPORT_OK);
-use Exporter;
-
-@ISA       = qw(Exporter);
-@EXPORT_OK = qw(get_climdivs);
 
 my @stcd = (101,102,103,104,105,106,107,108,201,202,203,204,205,206,207,301,302,303,304,305,306,307,308,309,401,402,403,404,405,406,407,
 501,502,503,504,505,601,602,603,701,702,801,802,803,804,805,806,807,901,902,903,904,905,906,907,908,909,1001,1002,1003,1004,1005,1006,
@@ -61,13 +64,21 @@ my @stcd = (101,102,103,104,105,106,107,108,201,202,203,204,205,206,207,301,302,
 4404,4405,4406,4501,4502,4503,4504,4505,4506,4507,4508,4509,4510,4601,4602,4603,4604,4605,4606,4701,4702,4703,4704,4705,4706,4707,4708,
 4709,4801,4802,4803,4804,4805,4806,4807,4808,4809,4810);
 
-my $package = __FILE__;
-my $mapfile = $package =~ s/\/lib\/perl\/GridToClimdivs.pm/\/lib\/map\/GridToClimdivs.map/r;
-my @map;
-if(-s $mapfile) { set_map($mapfile); }
-else            { cluck "MAPFILE was not found where it was expected and must be set using GridToClimdivs::set_map(MAPFILE)"; }
+my $package   = __FILE__;
+my $conus_map = $package =~ s/\/lib\/perl\/GridToClimdivs.pm/\/lib\/map\/GridToClimdivs_CONUS.map/r;
+my $akhi_map  = $package =~ s/\/lib\/perl\/GridToClimdivs.pm/\/lib\/map\/GridToClimdivs_AK-HI.map/r;
+my $climdivs  = $package =~ s/\/lib\/perl\/GridToClimdivs.pm/\/lib\/climdivs\/climdivs363.txt/r;
+my(@conus_map,@akhi_map);
+if(-s $conus_map) { @conus_map = _get_map($conus_map); }
+else              { cluck "CONUS_MAP was not found";  }
+if(-s $akhi_map)  { @akhi_map  = _get_map($akhi_map);  }
+else              { cluck "AKHI_MAP was not found";   }
+my $climdivs_order = {};
+my $climdivs_names = {};
+if(-s $climdivs)  { ($climdivs_order,$climdivs_names) = _get_climdivs($climdivs); }
+else              { cluck "CLIMDIVS definitions not found"; }
 
-sub set_map {
+sub _get_map {
 	confess "Argument required" unless(@_);
 	my $mapfile = shift;
 
@@ -76,6 +87,7 @@ sub set_map {
 	confess "Invalid mapfile" unless(-s $mapfile);
 	open(MAP,'<',$mapfile) or confess "Could not open $mapfile for reading";
 	{ my $header = <MAP>; }
+	my @map;
 
 	while(<MAP>) {
         	my $line = $_;
@@ -85,26 +97,91 @@ sub set_map {
 	}
 	
 	close(MAP);
+	return @map;
 }
 
-sub get_climdivs {
-	confess "Map not found - use set_map to load it into package data" unless(@map);
+sub _get_climdivs {
+	confess "Argument required" unless(@_);
+	my $climdivs_file = shift;
+
+	# --- Load climdivs information ---
+	
+	confess "Invalid climdivs file" unless(-s $climdivs_file);
+	open(CLIMDIVS,'<',$climdivs_file) or confess "Could not open $climdivs_file for reading";
+	my @climdivs = <CLIMDIVS>; chomp @climdivs;
+	close(CLIMDIVS);
+	my $order = {};
+	my $names = {};
+
+	foreach my $line (@climdivs) {
+		my($num,$div,$name) = split(/\|/,$line);
+		$order->{$num}      = $div;
+		$names->{$div}      = $name;
+	}
+
+	return ($order,$names);
+}
+
+sub new {
+	my $class             = shift;
+	my $self              = {};
+	$self->{MISSING}      = -9999.;  # Default value
+	my $init_val          = undef;
+	if(@_) { $init_val    = shift; }
+	else   { $init_val    = $self->{MISSING}; }
+
+	foreach my $div (keys %$climdivs_names) {
+		$self->{$div} = $init_val;
+	}
+
+	bless($self,$class);
+	return $self;
+}
+
+sub set_missing {
+	my $self        = shift;
+	confess "Argument required" unless @_;
+	my $missing_val = shift;
+
+	foreach my $div (keys %$climdivs_names) {
+		if($self->{$div} eq $self->{MISSING}) { $self->{$div} = $missing_val; }
+	}
+
+	$self->{MISSING} = $missing_val;
+	return 0;
+}
+
+sub set_conus_data {
+	my $self = shift;
+	confess "CONUS map not found" unless(@conus_map);
+	return &_set_data($self,\@conus_map,@_);
+}
+
+sub set_akhi_data {
+	my $self = shift;
+	confess "AK-HI map not found" unless(@akhi_map);
+	return &_set_data($self,\@akhi_map,@_);
+}
+
+sub _set_data {
+	my $self     = shift;
+	my $map_ref  = shift;
 	confess "Argument required" unless(@_);
 	my $data_ref = shift;
 
-	# --- Load gridded data into array ---
-	
+	# --- Load gridded data and map into arrays ---
+
 	my @gridded_data = unpack('f*',$$data_ref);
+	my @map          = @$map_ref;
 	confess "Input data grid size does not match the supplied map" unless(scalar(@gridded_data) == scalar(@map));
 
 	# --- Get area mean of gridpoints that fall within each division ---
-	
-	my($sums,$npts,$climdivs);
 
-	foreach my $stcd (@stcd) {
-		$sums->{$stcd}     = 0;
-		$npts->{$stcd}     = 0;
-		$climdivs->{$stcd} = -9999;
+	my($sums,$npts);
+
+	foreach my $div (keys %$climdivs_names) {
+		$sums->{$div}     = 0;
+		$npts->{$div}     = 0;
 	}
 
 	GRIDPOINT: for(my $i=0; $i<@map; $i++) {
@@ -117,11 +194,38 @@ sub get_climdivs {
 
 	} # :GRIDPOINT
 
-	foreach my $stcd (keys %$npts) {
-		if($npts->{$stcd} > 0) { $climdivs->{$stcd} = $sums->{$stcd} / $npts->{$stcd}; }
+	foreach my $div (keys %$climdivs_names) {
+		if($npts->{$div} > 0) { $self->{$div} = $sums->{$div} / $npts->{$div}; }
 	}
 
-	return $climdivs;
+	return 0;
+}
+
+sub get_data {
+	my $self     = shift;
+	my $data_ref = {};
+
+	foreach my $div (keys %$climdivs_names) {
+		$data_ref->{$div} = $self->{$div};
+	}
+
+	return $data_ref;
+}
+
+sub get_names {
+	my $self = shift;
+	return $climdivs_names;
+}
+
+sub get_climdivs_list {
+	my $self = shift;
+	my @list;
+
+	foreach my $div (sort {$a <=> $b} keys %$climdivs_order) {
+		push(@list,$div);
+	}
+
+	return @list;
 }
 
 1;
