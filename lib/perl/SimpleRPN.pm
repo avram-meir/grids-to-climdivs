@@ -1,23 +1,23 @@
 #!/usr/bin/perl
 
-package RPN;
+package SimpleRPN;
 
 =pod
 
 =head1 NAME
 
-RPN - A very simple Reverse Polish Notation calculator
+SimpleRPN - A very simple Reverse Polish Notation calculator
 
 =head1 SYNOPSIS
 
- use RPN qw(rpn_calc);
+ use SimpleRPN qw(rpn_calc);
  
  my $temp_degC = 100;
  my $temp_degF = rpn_calc(':',join(':',$temp_degC,9,'*',5,'/',32,'+');  # Returns 212!
 
 =head1 DESCRIPTION
 
-The RPN package provides a very basic and simple Reverse Polish Notation calculator. Only the 4 main arithmetic operators (addition +, subtraction -, multiplication *, division /) are supported.
+The SimpleRPN package provides a very basic and simple Reverse Polish Notation calculator. Only the 4 main arithmetic operators (addition +, subtraction -, multiplication *, division /) are supported.
 
 The algorithm for this calculator was taken from: L<https://perlmaven.com/reverse-polish-calculator-in-perl>
 
