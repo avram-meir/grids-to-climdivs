@@ -19,6 +19,8 @@ RPN - A very simple Reverse Polish Notation calculator
 
 The RPN package provides a very basic and simple Reverse Polish Notation calculator. Only the 4 main arithmetic operators (addition +, subtraction -, multiplication *, division /) are supported.
 
+The algorithm for this calculator was taken from: L<https://perlmaven.com/reverse-polish-calculator-in-perl>
+
 =head1 METHODS
 
 =head2 rpn_calc
