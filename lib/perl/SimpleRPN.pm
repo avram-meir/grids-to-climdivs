@@ -13,7 +13,7 @@ SimpleRPN - A very simple Reverse Polish Notation calculator
  use SimpleRPN qw(rpn_calc);
  
  my $temp_degC = 100;
- my $temp_degF = rpn_calc(':',join(':',$temp_degC,9,'*',5,'/',32,'+');  # Returns 212!
+ my $temp_degF = rpn_calc(join(':',$temp_degC,9,'*',5,'/',32,'+'),':');  # Returns 212!
 
 =head1 DESCRIPTION
 
@@ -25,9 +25,9 @@ The algorithm for this calculator was taken from: L<https://perlmaven.com/revers
 
 =head2 rpn_calc
 
- my $value = rpn_calc($delimiter,$rpn_expr);
+ my $value = rpn_calc($rpn_expr,$delimiter);
 
-Given a delimiter value (e.g., a comma, or a colon), and a Reverse Polish Notation expression using that deliminator as separators, returns the resulting value of the calculation.
+Given a valid expression in Reverse Polish Notation (operator(s) to the right of the operands), returns the resulting value of that expression. The default delimiter between the components of the expression is a comma ',', but can be set to other values by passing a second delimiter argument.
 
 =head1 AUTHOR
 
@@ -47,17 +47,18 @@ use Exporter;
 @EXPORT_OK = qw(rpn_calc);
 
 sub rpn_calc {
-	confess "Missing required arguments" unless(@_ >= 2);
-	my $delimiter  = shift;
+	confess "Argument required" unless(@_ >= 1);
 	my $rpn_expr   = shift;
+	my $delimiter  = ',';
+	if(@_) { $delimiter = shift; }
 	my @statements = split(/$delimiter/,$rpn_expr);
-	confess "Invalid input arguments" unless(@statements >= 3);
+	confess "Invalid RPN expression" unless(@statements >= 3);
 	push(@statements,'=');
 	my @stack;
 
 	EXPR: foreach my $expr (@statements) {
 
-		if ($expr eq '*') {
+		if($expr eq '*') {
 			confess "Invalid RPN expression" unless(@stack >= 2);
 			my $x = pop(@stack);
 			my $y = pop(@stack);
@@ -65,7 +66,7 @@ sub rpn_calc {
 			next EXPR;
 		}
 		
-		if ($expr eq '+') {
+		if($expr eq '+') {
 			confess "Invalid RPN expression" unless(@stack >= 2);
 			my $x = pop(@stack);
 			my $y = pop(@stack);
@@ -73,7 +74,7 @@ sub rpn_calc {
 			next EXPR;
 		}
 		
-		if ($expr eq '/') {
+		if($expr eq '/') {
 			confess "Invalid RPN expression" unless(@stack >= 2);
 			my $x = pop(@stack);
 			my $y = pop(@stack);
@@ -81,18 +82,34 @@ sub rpn_calc {
 			next EXPR;
 		}
 		
-		if ($expr eq '-') {
+		if($expr eq '-') {
 			confess "Invalid RPN expression" unless(@stack >= 2);
 			my $x = pop(@stack);
 			my $y = pop(@stack);
 			push(@stack, $y - $x);
-			next;
+			next EXPR;
+		}
+
+		if($expr eq '^') {
+			confess "Invalid RPN expression" unless(@stack >= 2);
+			my $x = pop(@stack);
+			my $y = pop(@stack);
+			push(@stack, $y**$x);
+			next EXPR;
+		}
+
+		if($expr eq '%') {
+			confess "Invalid RPN expression" unless(@stack >= 2)
+			my $x = pop(@stack);
+			my $y = pop(@stack);
+			push(@stack, $y % $x);
+			next EXPR;
 		}
 		
-		if ($in eq '=') {
+		if($in eq '=') {
 			confess "Invalid RPN expression" unless(@stack >= 2);
 			return pop(@stack);
-			last;
+			last EXPR;
 		}
 		
 		if(looks_like_number($expr)) { push @stack, $expr; }
