@@ -34,6 +34,7 @@ use strict;
 use warnings;
 use Carp qw(carp cluck croak confess);
 use Scalar::Util qw(looks_like_number reftype);
+use autodie;
 require File::Temp;
 use File::Temp ();
 use File::Temp qw(:seekable);
@@ -51,12 +52,17 @@ BEGIN {
 }
 
 sub flipbytes {
-
+	confess "Two arguments required" unless(@_ >= 2);
+	my $input  = shift;
+	my $output = shift;
+	confess "$input must be an existing file" unless(-s $input);
+	open(INPUT,'<',$input);
+	binmode(INPUT);
 
 }
 
 sub regrid {
-	confess "Three arguments required" unless(@_ >= 2);
+	confess "Three arguments required" unless(@_ >= 3);
 	my $config = shift;
 	my $map    = shift;
 	my $output = shift;
