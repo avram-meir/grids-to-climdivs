@@ -20,7 +20,19 @@ Data::BinaryUtils - A set of utilities to help prepare gridded binary data for c
 
 =head2 flipbytes
 
+ flipbytes($input_file,4,$output_file);
+ 
+ Given a binary data filename, the number of bytes in a word (data unit), and an output filename, opens the input binary data, reads it word by word, flips the bytes in each word, and writes the resulting binary data to the output file. If the output file exists, it will be overwritten.
+
+ LIMITATIONS: This function does not swap bits, nor can it handle unusual byte orders. It is a straight reversal (e.g., from big-endian to little-endian, or vice versa).
+
 =head2 regrid
+
+ regrid($config,$grid_type,$output_file);
+ 
+ Given a hash reference loaded with the contents of a grids-to-climdivs configuration file, the map grid type to use (CONUS or AK-HI), and an output filename, opens the input binary data, regrids it to match the corresponding map file, and stores the new binary data in the output file (note: the file will be overwritten if it exists). If a rpn expression is provided in the configuration settings, the calculations will be run on the data before writing. This function was designed to work with the grids-to-climdivs.pl script provided with this application.
+
+ Note: if the input filename in the configuration settings contains variables or date wildcards, these will need to be parsed before calling this function, or the input file will not be found.
 
 =head1 AUTHOR
 
@@ -52,13 +64,27 @@ BEGIN {
 }
 
 sub flipbytes {
-	confess "Two arguments required" unless(@_ >= 2);
-	my $input  = shift;
-	my $output = shift;
+	confess "Three arguments required" unless(@_ >= 3);
+	my $input    = shift;
+	my $wordsize = shift;
+	my $output   = shift;
 	confess "$input must be an existing file" unless(-s $input);
 	open(INPUT,'<',$input);
 	binmode(INPUT);
+	open(OUTPUT,'>',$output);
+	binmode(OUTPUT);
+	my $eof      = 0;
 
+	while(!$eof) {
+		my $word     = undef;
+		my $length   = read(INPUT,$word,$wordsize);
+		if($length != $wordsize) { carp "Possible data corruption found while reading $input"; next; }
+		elsif($length == 0)      { $eof = 1; next; }
+		my $flipword = reverse($word);
+		print OUTPUT $flipword;
+	}
+	
+	return 0;
 }
 
 sub regrid {
