@@ -74,21 +74,21 @@ use GridToClimdivs qw(get_climdivs);
 
 # --- Get the command-line options ---
 
-my $config      = '';
+my $config_file = '';
 my $date        = ParseDateString('today');  # Defaults to today's date if no -date option is supplied
 my $help        = undef;
 my $manual      = undef;
 my $output      = "$script_path../output";   # Defaults to this directory if no -output option is supplied
 
 GetOptions(
-	'config|c=s'     => \$config,
+	'config|c=s'     => \$config_file,
 	'date|d=s'       => \$date,
 	'help|h'         => \$help,
 	'manual|man'     => \$manual,
 	'output|o=s'     => \$output,
 );
 
-# --- Process options -help or -manual if invoked ---
+# --- Handle options -help or -manual ---
 
 if($help or $manual) {
 	my $verbose = 0;
@@ -106,8 +106,8 @@ my $opts_failed = '';
 
 # --- Validate config argument ---
 
-unless($config)    { $opts_failed = join("\n",$opts_failed,'Option -config must be supplied'); }
-unless(-s $config) { $opts_failed = join("\n",$opts_failed,'Option -config must be set to an existing file'); }
+unless($config_file)    { $opts_failed = join("\n",$opts_failed,'Option -config must be supplied'); }
+unless(-s $config_file) { $opts_failed = join("\n",$opts_failed,'Option -config must be set to an existing file'); }
 
 # --- Validate date argument ---
 
@@ -115,9 +115,9 @@ my $day = Date::Manip::Date->new();
 my $err = $day->parse($date);
 if($err) { $opts_failed = join("\n",$opts_failed,"Invalid -date argument: $date"); }
 
-print "Running grids-to-climdivs for ".$day->printf("%Y%m%d")." and $config\n";
+print "Running grids-to-climdivs for ".$day->printf("%Y%m%d")." and $config_file\n";
 
-# --- Process failed options ---
+# --- Handle failed options ---
 
 if($opts_failed) {
 
@@ -135,18 +135,72 @@ unless(-d $output) { mkpath($output) or die "Could not create directory $output 
 
 # --- Pull information from the configuration file ---
 
-my $config_params  = Config::Simple->new($config);
-my $input_file     = $config_params->param("input.file");
-my $input_template = $config_params->param("input.template");
-my $input_endian   = lc($config_params->param("input.byteorder"));
-my $input_missing  = $config_params->param("input.missing");
-my $input_headers  = $config_params->param("input.headers");
-my $input_rpn      = $config_params->param("input.rpn");
-my $input_regrid   = $config_params->param("input.regrid");
-my $input_ngrids   = $config_params->param("input.ngrids");
-my @output_grids   = $config_params->param("output.grids");
-my @output_files   = $config_params->param("output.files");
-my @output_descs   = $config_params->param("output.descriptions");
+my $config = Config::Simple->new($config_file)->vars();
+
+# --- List of allowed variables that can be in the config file ---
+
+my %allowed_vars = (
+        APP_PATH => "$script_path..",
+        DATA_IN  => $ENV{DATA_IN},
+        DATA_OUT => $ENV{DATA_OUT},
+);
+
+# --- Parse variables and date wildcards in the config file params ---
+
+foreach my $param (keys %$config) {
+
+	if(ref($config->{$param}) eq 'ARRAY') {
+
+		for(my $i=0; $i<scalar(@{$config->{$param}}); $i++) {
+			$config->{$param}[$i] = parse_param($config->{$param}[$i]);
+		}
+
+	}
+	else {
+		$config->{$param} = parse_param($config->{$param});
+	}
+
+}
+
+# --- QC the config file params ---
+
+unless(-s $config->{'input.file'}) {
+	die "The input.file ".$config->{'input.file'}." in $config_file does not exist - exiting";
+}
+
+unless($config->{'input.ngrids'} eq int($config->{'input.ngrids'}) and $config->{'input.ngrids'} > 0) {
+	die "The input.ngrids param in $config_file is invalid - exiting";
+}
+
+unless(scalar(@{$config->{'output.grids'}}) <= $config->{'input.ngrids'}) {
+	die "The number of items in output.grids exceeds the value of input.ngrids in $config_file - exiting";
+}
+
+unless(scalar(@{$config->{'output.grids'}}) == scalar(@{$config->{'output.files'}}) and scalar(@{$config->{'output.grids'}}) == scalar(@{$config->{'output.descriptions'}})) {
+	die "The number of items in output.grids, output.files, and output.descriptions do not match in $config_file - exiting";
+}
+
+
+
+
+
+
+
+
+
+
+
+my $input_file      = $config->param("input.file");
+my $regrid_template = $config->param("regrid.template");
+my $input_endian    = lc($config->param("input.byteorder"));
+my $input_missing   = $config->param("input.missing");
+my $input_headers   = $config->param("input.headers");
+my $input_regrid    = $config->param("input.regrid");
+my $input_ngrids    = $config->param("input.ngrids");
+my $output_rpn      = $config->param("output.rpn");
+my @output_grids    = $config->param("output.grids");
+my @output_files    = $config->param("output.files");
+my @output_descs    = $config->param("output.descriptions");
 
 # --- List of allowed variables that can be in the config file ---
 
@@ -250,6 +304,25 @@ foreach my $output_grid (@output_grids) {
 
 	print "$output_file written!\n";
 	$counter++;
+}
+
+# --- End of script ---
+
+sub parse_param {
+	my $param = shift;
+	my $day   = shift;
+
+	# --- List of allowed variables that can be in the config file ---
+
+	my %allowed_vars = (
+		APP_PATH => "$script_path..",
+		DATA_IN  => $ENV{DATA_IN},
+		DATA_OUT => $ENV{DATA_OUT},
+	);
+
+	my $param_parsed =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+	if($param_parsed =~ /illegal000BLORT000illegal/) { die "Illegal variable found in $param"; }
+	return $day->printf($param_parsed);
 }
 
 exit 0;
