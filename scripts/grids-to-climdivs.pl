@@ -60,6 +60,7 @@ use Pod::Usage;
 use Date::Manip;
 use Config::Simple;
 use utf8;
+use autodie;
 
 # --- Identify script ---
 
@@ -180,76 +181,20 @@ unless(scalar(@{$config->{'output.grids'}}) == scalar(@{$config->{'output.files'
 	die "The number of items in output.grids, output.files, and output.descriptions do not match in $config_file - exiting";
 }
 
-
-
-
-
-
-
-
-
-
-
-my $input_file      = $config->param("input.file");
-my $regrid_template = $config->param("regrid.template");
-my $input_endian    = lc($config->param("input.byteorder"));
-my $input_missing   = $config->param("input.missing");
-my $input_headers   = $config->param("input.headers");
-my $input_regrid    = $config->param("input.regrid");
-my $input_ngrids    = $config->param("input.ngrids");
-my $output_rpn      = $config->param("output.rpn");
-my @output_grids    = $config->param("output.grids");
-my @output_files    = $config->param("output.files");
-my @output_descs    = $config->param("output.descriptions");
-
-# --- List of allowed variables that can be in the config file ---
-
-my %allowed_vars = (
-	APP_PATH => "$script_path..",
-	DATA_IN  => $ENV{DATA_IN},
-	DATA_OUT => $ENV{DATA_OUT},
-);
-
-# --- Parse allowed variables and date wildcards in the config file params ---
-
-my $output_grids = join(',',@output_grids);
-my $output_files = join(',',@output_files);
-my $output_descs = join(',',@output_descs);
-
-foreach ($input_file,$input_template,$input_regrid,$input_ngrids,$output_grids,$output_files,$output_descs) {
-	$_     =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
-	if($_  =~ /illegal000BLORT000illegal/) { die "Illegal variable(s) found in $config - exiting"; }
-	$_     = $day->printf($_);
-}
-
-@output_grids = split(',',$output_grids);
-@output_files = split(',',$output_files);
-@output_descs = split(',',$output_descs);
-
-# --- Parse list params and perform sanity checks ---
-
-unless($input_ngrids eq int($input_ngrids) and $input_ngrids > 0) { die "Invalid input::ngrids param in $config - exiting"; }
-unless(scalar(@output_grids) <= $input_ngrids) { die "The param output::grids must be less than or equal to input::ngrids - exiting"; }
-unless(scalar(@output_grids) == scalar(@output_files) and scalar(@output_grids) == scalar(@output_descs)) { die "The number of elements in output::grids, output::files and output::descriptions must match - exiting"; }
-unless($input_endian eq 'big_endian' or $input_endian eq 'little_endian') { die "The param input::byteorder is invalid - exiting"; }
-my $headers = 'no_header';
-if($input_headers) { $headers = 'header'; }
-
-# --- Check that input file exists ---
-
-unless(-s $input_file) { die "Binary input file $input_file not found - exiting"; }
-
 # --- Split the input file into ngrids pieces ---
 
 # This is assumes the input file is pure unformatted binary so that it'll divide evenly into input_ngrids pieces
 
-my $split_dir = File::Temp->newdir();
+my $npieces     = $config->{'input.ngrids'};
+my $binary_file = $config->{'input.file'};
+my $split_dir   = File::Temp->newdir();
 
-open(SPLIT, "split -n $input_ngrids --verbose $input_file $split_dir/input 2>&1 |") or die "Could not split $input_file into separate grids - $! - exiting";
+open(SPLIT, "split -n $npieces --verbose $binary_file $split_dir/input 2>&1 |") or die "Could not split $binary_file into separate grids - $! - exiting";
 
 my @input_files;
 
 while (<SPLIT>) {
+
 	if ( /^creating file (.*)$/ ) {
 		my $split_file = $1;
 		$split_file    =~ s/[\p{Pi}\p{Pf}'"]//g;  # Remove every type of quotation mark
@@ -259,48 +204,68 @@ while (<SPLIT>) {
 	else {
 		warn "Warning: this output line from split was not parsed: $_";
 	}
+
 }
 
 close(SPLIT);
 
-# --- Loop through the desired output grids ---
+# --- Loop through the input pieces and create climdivs data for the requested grids ---
 
 my $counter = 0;
 
-foreach my $output_grid (@output_grids) {
-	print "Converting grid $output_grid of $input_ngrids to climate divisions\n";
+foreach my $og (@{$config->{'output.grids'}}) {
+	print "Converting grid $og of $npieces in $binary_file to climate divisions\n";
 
-	my $input_fn   = $input_files[$output_grid-1];
+	my $input_fn   = $input_files[$og-1];
 
-	# --- Regrid the input data to 1/8th degree matching the grid-to-climdiv map ---
+	# --- Regrid the input data to match the CONUS map if needed ---
+	
+	my $conus_fn = $input_fn;
 
-	my $regrid_dir = File::Temp->newdir();
-	my $regrid_fh  = File::Temp->new(DIR => $regrid_dir);
-	my $regrid_fn  = $regrid_fh->filename;
-
-	if($input_regrid) {
-		regrid($input_template,$input_fn,$headers,$input_endian,$input_missing,$regrid_fn,$input_rpn);
-		$input_fn = $regrid_fn;
+	if($config->{'input.rgconus'}) {
+		my $work_dir = File::Temp->newdir();
+		my $conus_fh = File::Temp->new(DIR => $work_dir);
+		$conus_fn    = $conus_fh->filename;
+		regrid($config,'CONUS',$conus_fn);
 	}
 
-	# --- Convert the gridded data to the climate divisions ---
+	# --- Regrid the input data to match the AK-HI map if needed ---
+	
+	my $akhi_fn = $input_fn;
 
-	open(GRID,'<',$input_fn) or die "Could not open binary data file $input_fn - exiting";
-	binmode(GRID);
-	my $grid = join('',<GRID>);
-	close(GRID);
+	if($config->{'input.rgakhi'}) {
+		my $work_dir = File::Temp->newdir();
+		my $akhi_fh  = File::Temp->new(DIR => $work_dir);
+		$akhi_fn     = $akhi_fh->filename;
+		regrid($config,'AK-HI',$akhi_fn);
+	}
 
-	my $climdivs = get_climdivs(\$grid);
+	# --- Get climate divisions data from the gridded data ---
+
+	open(CONUS,'<',$conus_fn); binmode(CONUS);
+	my $conus_grid = join('',<CONUS>);
+	close(CONUS);
+	open(AKHI,'<',$akhi_fn);   binmode(AKHI);
+	my $akhi_grid  = join('',<AKHI>);
+	close(AKHI);
+	my $climdivs = GridToClimdivs->new();
+	$climdivs->set_missing($config->{'input.missing'});
+	$climdivs->set_conus_data($conus_grid);
+	$climdivs->set_akhi_data($akhi_grid);
+	my $climdivs_data = $climdivs->get_data();
 
 	# --- Write climate divisions data to file ---
 	
-	my $output_file = "$output/".$output_files[$counter];
+	my $output_file = "$output/".$config->{'output.files'}[$counter];
 	my($output_name,$output_path,$output_suffix) = fileparse($output_file, qr/\.[^.]*/);
 	unless(-d $output_path) { mkpath $output_path or die "Could not create directory $output_path - $! - exiting"; }
-	open(OUTPUT,'>',$output_file) or die "Could not open file in $output_file for writing - exiting";
-	print OUTPUT join('|','STCD',$output_descs[$counter])."\n";
-	my @divs = sort { $a <=> $b } keys %{$climdivs};
-	foreach my $div (@divs) { print OUTPUT join('|',$div,sprintf("%.3f",$climdivs->{$div}))."\n"; }
+	open(OUTPUT,'>',$output_file);
+	print OUTPUT join('|','STCD',$config->{'output.descriptions'}[$counter])."\n";
+	my @stcd = $climdivs->get_climdivs_list();
+
+	foreach my $stcd (@stcd) {
+		print OUTPUT join('|',$stcd,sprintf("%.3f",$climdivs->{$stcd}))."\n";
+	}
 
 	print "$output_file written!\n";
 	$counter++;
