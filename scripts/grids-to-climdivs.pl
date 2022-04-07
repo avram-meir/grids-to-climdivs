@@ -60,7 +60,6 @@ use Pod::Usage;
 use Date::Manip;
 use Config::Simple;
 use utf8;
-use autodie;
 
 # --- Identify script ---
 
@@ -70,8 +69,8 @@ BEGIN { ($script_name,$script_path,$script_suffix) = fileparse(__FILE__, qr/\.[^
 # --- Application library packages ---
 
 use lib "$script_path../lib/perl";
-use Regrid qw(regrid);
-use GridToClimdivs qw(get_climdivs);
+use Data::BinaryUtils qw(regrid);
+use GridToClimdivs;
 
 # --- Get the command-line options ---
 
@@ -189,7 +188,7 @@ my $npieces     = $config->{'input.ngrids'};
 my $binary_file = $config->{'input.file'};
 my $split_dir   = File::Temp->newdir();
 
-open(SPLIT, "split -n $npieces --verbose $binary_file $split_dir/input 2>&1 |") or die "Could not split $binary_file into separate grids - $! - exiting";
+open(SPLIT, "split -n $npieces --verbose $binary_file $split_dir/input 2>&1 |") or die "Could not split $binary_file into $npieces pieces for processing - exiting";
 
 my @input_files;
 
@@ -242,10 +241,12 @@ foreach my $og (@{$config->{'output.grids'}}) {
 
 	# --- Get climate divisions data from the gridded data ---
 
-	open(CONUS,'<',$conus_fn); binmode(CONUS);
+	open(CONUS,'<',$conus_fn) or die "Could not open $conus_fn for reading - $! - exiting";
+	binmode(CONUS);
 	my $conus_grid = join('',<CONUS>);
 	close(CONUS);
-	open(AKHI,'<',$akhi_fn);   binmode(AKHI);
+	open(AKHI,'<',$akhi_fn) or die "Could not open $akhi_fn for reading - $! - exiting";
+	binmode(AKHI);
 	my $akhi_grid  = join('',<AKHI>);
 	close(AKHI);
 	my $climdivs = GridToClimdivs->new();
@@ -259,7 +260,7 @@ foreach my $og (@{$config->{'output.grids'}}) {
 	my $output_file = "$output/".$config->{'output.files'}[$counter];
 	my($output_name,$output_path,$output_suffix) = fileparse($output_file, qr/\.[^.]*/);
 	unless(-d $output_path) { mkpath $output_path or die "Could not create directory $output_path - $! - exiting"; }
-	open(OUTPUT,'>',$output_file);
+	open(OUTPUT,'>',$output_file) or die "Could not open $output_file for writing - $! - exiting";
 	print OUTPUT join('|','STCD',$config->{'output.descriptions'}[$counter])."\n";
 	my @stcd = $climdivs->get_climdivs_list();
 

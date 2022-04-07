@@ -46,7 +46,6 @@ use strict;
 use warnings;
 use Carp qw(carp cluck croak confess);
 use Scalar::Util qw(looks_like_number reftype);
-use autodie;
 require File::Temp;
 use File::Temp ();
 use File::Temp qw(:seekable);
@@ -71,7 +70,7 @@ sub flipbytes {
 	confess "$input must be an existing file" unless(-s $input);
 	open(INPUT,'<',$input);
 	binmode(INPUT);
-	open(OUTPUT,'>',$output);
+	open(OUTPUT,'>',$output) or confess "Could not open $output for writing - $!";
 	binmode(OUTPUT);
 	my $eof      = 0;
 
@@ -95,9 +94,10 @@ sub regrid {
 	if(reftype($config)) { confess "Invalid config argument" unless reftype($config) eq 'HASH'; }
 	else                 { confess "Invalid config argument"; }
 	confess "Config argument is missing parameters" unless(exists $config->{"input.template"} and exists $config->{"input.file"} and exits $config->{"input.headers"} and exists $config->{"input.missing"} and exists $config->{"output.rpn"});
-	my $template  = $config->{"input.template"};
+	my $template  = $config->{"regrid.template"};
 	my $input     = $config->{"input.file"};
 	my $header    = $config->{"input.headers"};
+	my $byteorder = $config->{"input.byteorder"};
 	my $missing   = $config->{"input.missing"};
 	my $rpn       = $config->{"output.rpn"};
 	confess "$template must be an existing file" unless(-s $template);
