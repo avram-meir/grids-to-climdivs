@@ -39,6 +39,7 @@ This documentation was last updated on: 28MAR2022
 
 use strict;
 use warnings;
+use Scalar::Util qw(looks_like_number);
 use Carp qw(carp cluck croak confess);
 use vars qw(@ISA @EXPORT_OK);
 use Exporter;
@@ -99,15 +100,15 @@ sub rpn_calc {
 		}
 
 		if($expr eq '%') {
-			confess "Invalid RPN expression" unless(@stack >= 2)
+			confess "Invalid RPN expression" unless(@stack >= 2);
 			my $x = pop(@stack);
 			my $y = pop(@stack);
 			push(@stack, $y % $x);
 			next EXPR;
 		}
 		
-		if($in eq '=') {
-			confess "Invalid RPN expression" unless(@stack >= 2);
+		if($expr eq '=') {
+			#confess "Invalid RPN expression" unless(@stack >= 2);
 			return pop(@stack);
 			last EXPR;
 		}

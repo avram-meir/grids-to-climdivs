@@ -87,23 +87,23 @@ sub flipbytes {
 }
 
 sub regrid {
-	confess "Three arguments required" unless(@_ >= 3);
+	confess "Four arguments required" unless(@_ >= 4);
+	my $input  = shift;
 	my $config = shift;
 	my $map    = shift;
 	my $output = shift;
 	if(reftype($config)) { confess "Invalid config argument" unless reftype($config) eq 'HASH'; }
 	else                 { confess "Invalid config argument"; }
-	confess "Config argument is missing parameters" unless(exists $config->{"input.template"} and exists $config->{"input.file"} and exits $config->{"input.headers"} and exists $config->{"input.missing"} and exists $config->{"output.rpn"});
+	confess "Config argument is missing parameters" unless(exists $config->{"regrid.template"} and exists $config->{"input.headers"} and exists $config->{"input.missing"} and exists $config->{"output.rpn"});
 	my $template  = $config->{"regrid.template"};
-	my $input     = $config->{"input.file"};
 	my $header    = $config->{"input.headers"};
 	my $byteorder = $config->{"input.byteorder"};
 	my $missing   = $config->{"input.missing"};
 	my $rpn       = $config->{"output.rpn"};
 	confess "$template must be an existing file" unless(-s $template);
 	confess "$input must be an existing file"    unless(-s $input);
-	if($rpn) { $rpn = " -rpn \"$rpn\""; }
-	else     { $rpn = "";               }
+	#if($rpn) { $rpn = " -rpn \"$rpn\""; }
+	#else     { $rpn = "";               }
 	confess "$map is invalid" unless($map eq 'CONUS' or $map eq 'AK-HI');
 
 	# --- Import binary dataset into grib2 format ---
@@ -111,7 +111,8 @@ sub regrid {
 	my $work_dir  = File::Temp->newdir();
 	my $grib_orig = File::Temp->new(DIR => $work_dir);
 	my $grib_orig_fn = $grib_orig->filename;
-	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -$header -$byteorder -undefine_val $missing$rpn -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
+	#my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -$header -$byteorder -undefine_val $missing$rpn -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
+	my $error        = system("$wgrib2 -d 1 $template -import_ieee $input -$header -$byteorder -undefine_val $missing -set_date 19710101 -set_grib_type j -set_scaling -1 0 -grib_out $grib_orig_fn > /dev/null");
 	if($error) { confess "Could not import $input into grib2 format"; }
 
 	# --- Regrid data to the map grid ---

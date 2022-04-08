@@ -115,6 +115,7 @@ sub new {
 	my $init_val          = undef;
 	if(@_) { $init_val    = shift; }
 	else   { $init_val    = $self->{MISSING}; }
+	$self->{SANITY_LIMIT} = 999999999;
 
 	foreach my $div (keys %$climdivs_names) {
 		$self->{$div} = $init_val;
@@ -134,6 +135,15 @@ sub set_missing {
 	}
 
 	$self->{MISSING} = $missing_val;
+	return 0;
+}
+
+sub set_sanity_limit {
+	my $self              = shift;
+	confess "Argument required" unless @_;
+	my $sanity_limit      = shift;
+	carp "Sanity limit is not numeric" unless(looks_like_number($sanity_limit));
+	$self->{SANITY_LIMIT} = $sanity_limit;
 	return 0;
 }
 
@@ -173,7 +183,7 @@ sub _set_data {
 	GRIDPOINT: for(my $i=0; $i<@map; $i++) {
 		next GRIDPOINT unless(exists $sums->{$map[$i]});
 
-		if(looks_like_number($gridded_data[$i]) and abs($gridded_data[$i] - $self->{MISSING}) < 0.001) {
+		if(looks_like_number($gridded_data[$i]) and abs($gridded_data[$i] - $self->{MISSING}) > 0.001 and abs($gridded_data[$i]) < $self->{SANITY_LIMIT}) {
 			$sums->{$map[$i]} = $sums->{$map[$i]} + $gridded_data[$i];
 			$npts->{$map[$i]} = $npts->{$map[$i]} + 1;
 		}
@@ -207,8 +217,8 @@ sub get_climdivs_list {
 	my $self = shift;
 	my @list;
 
-	foreach my $div (sort {$a <=> $b} keys %$climdivs_order) {
-		push(@list,$div);
+	foreach my $num (sort {$a <=> $b} keys %$climdivs_order) {
+		push(@list,$climdivs_order->{$num});
 	}
 
 	return @list;

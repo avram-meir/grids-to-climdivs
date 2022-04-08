@@ -71,6 +71,7 @@ BEGIN { ($script_name,$script_path,$script_suffix) = fileparse(__FILE__, qr/\.[^
 use lib "$script_path../lib/perl";
 use Data::BinaryUtils qw(regrid);
 use GridToClimdivs;
+use SimpleRPN qw(rpn_calc);
 
 # --- Get the command-line options ---
 
@@ -152,12 +153,12 @@ foreach my $param (keys %$config) {
 	if(ref($config->{$param}) eq 'ARRAY') {
 
 		for(my $i=0; $i<scalar(@{$config->{$param}}); $i++) {
-			$config->{$param}[$i] = parse_param($config->{$param}[$i]);
+			$config->{$param}[$i] = parse_param($config->{$param}[$i],$day);
 		}
 
 	}
 	else {
-		$config->{$param} = parse_param($config->{$param});
+		$config->{$param} = parse_param($config->{$param},$day);
 	}
 
 }
@@ -210,22 +211,23 @@ close(SPLIT);
 
 # --- Loop through the input pieces and create climdivs data for the requested grids ---
 
-my $counter = 0;
+my $counter  = 0;
+my $work_dir = File::Temp->newdir();
 
 foreach my $og (@{$config->{'output.grids'}}) {
 	print "Converting grid $og of $npieces in $binary_file to climate divisions\n";
 
 	my $input_fn   = $input_files[$og-1];
+	my $conus_fh   = File::Temp->new(DIR => $work_dir);
+	my $akhi_fh    = File::Temp->new(DIR => $work_dir);
 
 	# --- Regrid the input data to match the CONUS map if needed ---
 	
 	my $conus_fn = $input_fn;
 
 	if($config->{'input.rgconus'}) {
-		my $work_dir = File::Temp->newdir();
-		my $conus_fh = File::Temp->new(DIR => $work_dir);
-		$conus_fn    = $conus_fh->filename;
-		regrid($config,'CONUS',$conus_fn);
+		$conus_fn = $conus_fh->filename;
+		regrid($input_fn,$config,'CONUS',$conus_fn);
 	}
 
 	# --- Regrid the input data to match the AK-HI map if needed ---
@@ -233,26 +235,26 @@ foreach my $og (@{$config->{'output.grids'}}) {
 	my $akhi_fn = $input_fn;
 
 	if($config->{'input.rgakhi'}) {
-		my $work_dir = File::Temp->newdir();
-		my $akhi_fh  = File::Temp->new(DIR => $work_dir);
-		$akhi_fn     = $akhi_fh->filename;
-		regrid($config,'AK-HI',$akhi_fn);
+		$akhi_fn = $akhi_fh->filename;
+		regrid($input_fn,$config,'AK-HI',$akhi_fn);
 	}
 
 	# --- Get climate divisions data from the gridded data ---
 
+	print "Opening $conus_fn\n";
 	open(CONUS,'<',$conus_fn) or die "Could not open $conus_fn for reading - $! - exiting";
 	binmode(CONUS);
 	my $conus_grid = join('',<CONUS>);
 	close(CONUS);
+	print "Opening $akhi_fn\n";
 	open(AKHI,'<',$akhi_fn) or die "Could not open $akhi_fn for reading - $! - exiting";
 	binmode(AKHI);
 	my $akhi_grid  = join('',<AKHI>);
 	close(AKHI);
 	my $climdivs = GridToClimdivs->new();
 	$climdivs->set_missing($config->{'input.missing'});
-	$climdivs->set_conus_data($conus_grid);
-	$climdivs->set_akhi_data($akhi_grid);
+	$climdivs->set_conus_data(\$conus_grid);
+	$climdivs->set_akhi_data(\$akhi_grid);
 	my $climdivs_data = $climdivs->get_data();
 
 	# --- Write climate divisions data to file ---
@@ -265,7 +267,9 @@ foreach my $og (@{$config->{'output.grids'}}) {
 	my @stcd = $climdivs->get_climdivs_list();
 
 	foreach my $stcd (@stcd) {
-		print OUTPUT join('|',$stcd,sprintf("%.3f",$climdivs->{$stcd}))."\n";
+		my $value = $climdivs_data->{$stcd};
+		if($config->{'output.rpn'}) { $value = rpn_calc(join(':',$value,$config->{'output.rpn'}),':'); }
+		print OUTPUT join('|',$stcd,sprintf("%.3f",$value))."\n";
 	}
 
 	print "$output_file written!\n";
@@ -286,7 +290,8 @@ sub parse_param {
 		DATA_OUT => $ENV{DATA_OUT},
 	);
 
-	my $param_parsed =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
+	my $param_parsed = $param;
+	$param_parsed    =~ s/\$(\w+)/exists $allowed_vars{$1} ? $allowed_vars{$1} : 'illegal000BLORT000illegal'/eg;
 	if($param_parsed =~ /illegal000BLORT000illegal/) { die "Illegal variable found in $param"; }
 	return $day->printf($param_parsed);
 }
