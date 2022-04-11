@@ -18,11 +18,13 @@ Some of the longest record climate datasets for the contiguous United States uti
 
 More recently, climate divisions were [defined for Alaska](https://www.ncdc.noaa.gov/news/climate-division-data-now-available-alaska), and Alaska data are now included in products such as the [National Centers for Environmental Information (NCEI)](https://www.ncei.noaa.gov/)'s [nClimDiv dataset](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00005). For Hawaii, six climate divisions consisting of the largest populated islands are defined.
 
-Traditionally, climate divisional data were estimated by using a weighted average of data from nearby stations; however, with the proliferation of high quality and high resolution gridded observational data now available, we can improve the quality of the climate divisions data by computing them from these gridded products. This software application provides a technique to compute degree days data from gridded products via the following steps:
+In the past, climate divisions data were estimated using a weighted average of data from nearby stations; however, with the availability of high quality and high resolution gridded observational datasets, climate divisions data should be computed from these gridded products. This software application provides a process to compute degree days data from gridded products using the following steps:
 
-1. Regrid the gridded input data to predefined grid maps of the 363 climate divisions (a 0.125 degree grid covering the CONUS to get the 344 CONUS divisions, and a 1/6th degree global grid to get the Alaska and Hawaii divisions) if needed
-3. Take the straight average of the gridpoints falling within a divion to calculate that division's value
-4. Write the climate divisonal data to a pipe-delimited text file
+1. A "map" file is provided using a 1/8th degree lat/lon grid over the CONUS listing which gridpoints fall within a climate division. A similar map file is provided using a 1/6th degree lat/lon grid over the globe listing which gridpoints fall within each Alaska division or Hawaiian island.
+2. If needed, input grids are regridded to match the resolution and domain of these map files using wgrib2 software. In order to perform this step, the input grid must have an example (template) in grib2 format to define the grid dimensions for the regrid.
+3. Climate divisions data are computed using a straight average of the gridpoints that fall within each division.
+4. If needed, unit conversions or other calculations can be performed on the climate divisions data before output is written.
+5. Climate divisions data are written to a pipe-delimited text file.
 
 ### Built With
 
@@ -32,13 +34,25 @@ Traditionally, climate divisional data were estimated by using a weighted averag
 
 ## Getting Started
 
+### Environment
+
+The grids-to-climdivs application is designed to run in the [bash shell](https://www.gnu.org/software/bash/). The bash shell is available on Linux and MacOS systems, and on [Windows systems now as well](https://itsfoss.com/install-bash-on-windows/).
+
 ### Prerequisites
 
 The grids-to-climdivs application relies on other software that needs to be installed on your system.
 
+#### Install Perl
+
+A Perl interpreter must be installed on your system (i.e., entering `which perl` in a bash shell prompt should give you a path to the perl interpreter). Perl is installed by default on most Linux systems, in which case you do not need to do anything. If you need to install Perl:
+
+* [Install Perl on Unix/Linux systems](https://learn.perl.org/installing/unix_linux.html)
+* [Install Perl on Windows systems](https://learn.perl.org/installing/windows.html)
+* [Install Perl on MacOS systems](https://learn.perl.org/installing/osx.html)
+
 #### Install CPAN Modules
 
-See [Installing Perl Modules](http://www.cpan.org/modules/INSTALL.html) for more information about installing packages from CPAN.
+Several packages must be installed from the CPAN library. See [Installing Perl Modules](http://www.cpan.org/modules/INSTALL.html) for more information about installing packages from CPAN.
 
 * [Date::Manip](https://metacpan.org/pod/Date::Manip)
 * [Config::Simple](https://metacpan.org/pod/Config::Simple)
@@ -46,7 +60,7 @@ See [Installing Perl Modules](http://www.cpan.org/modules/INSTALL.html) for more
 
 #### Install wgrib2
 
-The wgrib2 utility must be compiled and installed on your system. Detailed instructions can be found here: [wgrib2 compile questions](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/compile_questions.html). There are some available pre-compiled versions of wgrib2, but only for specific systems, and YMMV.
+The wgrib2 utility must be compiled and installed on your system. Detailed instructions can be found here: [wgrib2 compile questions](https://www.cpc.ncep.noaa.gov/products/wesley/wgrib2/compile_questions.html). There are some available pre-compiled versions of wgrib2, but only for specific systems, and your mileage may vary.
 
 Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 
@@ -58,6 +72,8 @@ Precompiled wgrib2 binaries for download can (possibly) be found on these sites:
 This application was developed and tested using wgrib2 v3.1.0.
 
 ### Install grids-to-climdivs
+
+Once the prerequisite software is installed, now install grids-to-climdivs itself!
 
 1. Clone the repo:
   ```git clone git@github.com:avram-meir/grids-to-climdivs.git```
@@ -179,7 +195,7 @@ Usage:
 
 ### Driver script
 
-The driver script `drivers/daily.sh` is a bash shell script intended to help run grids-to-climdivs in an automated sense, e.g., on a cron job, or to generate a large archive. The script takes three positional arguments: `./daily.pl config startdate enddate`
+The driver script `drivers/daily.sh` is a bash shell script intended to help run grids-to-climdivs in a more automated way, e.g., on a cron job, or to generate a large archive over many dates. The script takes three positional arguments: `./daily.pl config startdate enddate`
 
 `config` This is the configuration file describing the input grids to use and output data files to create.
 
@@ -187,19 +203,19 @@ The driver script `drivers/daily.sh` is a bash shell script intended to help run
 
 `enddate` This is the ending date, or the last date to create climate divisions data. When the driver script hits this end date, it will also run update-dates.pl to attempt to backfill anything missed. The default period is 30 days; reset this in the script if you want it shorter or longer.
 
-The `config` argument is required. If only one date argument is provided, both `startdate` and `enddate` will be set to it (e.g., only that date will be run, and update-dates.pl will be run). If no date arguments are supplied, both `startdate` and `enddate` will be set to yesterday's date based on the system clock.
+The `config` argument is required. If only one date argument is provided, both `startdate` and `enddate` will be set to it (e.g., only that date will be run, and update-dates.pl will be run targeting that date). If no date arguments are supplied, both `startdate` and `enddate` will be set to yesterday's date based on the system clock.
 
 ## Output Data
 
-To create a sample output file (and a good way to test the software to make sure it works on your system!), `cd` into the application directory and run the following: `perl scripts/grids-to-climdivs.pl -c config/config.example -o output`. This should result in output to the terminal that looks like:
+To create a sample output file (and a good way to test the software to make sure it works on your system!), `cd` into the application directory and run the following: `perl scripts/grids-to-climdivs.pl -c config/binary-example.config -o output`. This should result in output to the terminal that looks like:
 
 ```
-Running grids-to-climdivs for [yesterday] and config/config.example
-Converting grid 1 of 6 to climate divisions
+Running grids-to-climdivs for 20220411 and config/binary-example.config
+Converting grid 1 of 3 in scripts/../config/sample-binary.grid to climate divisions
 output/sample.tmax.climdivs written!
-Converting grid 3 of 6 to climate divisions
+Converting grid 2 of 3 in scripts/../config/sample-binary.grid to climate divisions
 output/sample.tmin.climdivs written!
-Converting grid 5 of 6 to climate divisions
+Converting grid 3 of 3 in scripts/../config/sample-binary.grid to climate divisions
 output/sample.tave.climdivs written!
 ```
 
@@ -207,18 +223,18 @@ If you see that, then you're in good shape! Now run: `head output/sample.tmax.cl
 
 ```
 STCD|TMAX
-101|55.823
-102|56.514
-103|58.756
-104|57.856
-105|57.742
-106|60.745
-107|63.113
-108|63.514
-201|56.982
+AL01|55.843
+AL02|56.524
+AL03|58.764
+AL04|57.871
+AL05|57.754
+AL06|60.756
+AL07|63.113
+AL08|63.499
+AK01|-18.725
 ```
 
-Data are pipe (|) delimited. The first line of this file is the header line, and STCD means "state number and climate division number". A table defining these states and divisions can be found [here](https://ftp.cpc.ncep.noaa.gov/htdocs/degree_days/weighted/daily_data/regions/ClimateDivisions.txt). TMAX is what the corresponding `descriptions` parameter was set to in the config file. Here it means maximum temperature.
+Data are pipe (|) delimited. The first line of this file is the header line, and STCD means "state acronym and climate division number". A table defining these states and divisions can be found [here](lib/climdivs/climdivs363.txt). TMAX is what the corresponding `descriptions` parameter was set to in the config file, and it means maximum temperature.
 
 Note that for this sample case, the default date of yesterday does not matter.
 
