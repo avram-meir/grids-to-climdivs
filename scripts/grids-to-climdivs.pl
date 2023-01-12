@@ -55,7 +55,7 @@ use File::Path qw(mkpath);
 require File::Temp;
 use File::Temp ();
 use File::Temp qw(:seekable);
-use Scalar::Util qw(blessed looks_like_number openhandle);
+use Scalar::Util qw(blessed looks_like_number openhandle reftype);
 use Pod::Usage;
 use Date::Manip;
 use Config::Simple;
@@ -173,12 +173,20 @@ unless($config->{'input.ngrids'} eq int($config->{'input.ngrids'}) and $config->
 	die "The input.ngrids param in $config_file is invalid - exiting";
 }
 
+# Bugfix - the code assumes that output.grids, output.files, and output.descriptions are 
+# all array refs, but if ngrids=1 then these will be scalars. So let's just force them to 
+# always be array refs.
+
+$config->{'output.grids'}        = [ $config->{'output.grids'} ]        if ref($config->{'output.grids'}) ne 'ARRAY';
+$config->{'output.files'}        = [ $config->{'output.files'} ]        if ref($config->{'output.files'}) ne 'ARRAY';
+$config->{'output.descriptions'} = [ $config->{'output.descriptions'} ] if ref($config->{'output.descriptions'}) ne 'ARRAY';
+
 unless(scalar(@{$config->{'output.grids'}}) <= $config->{'input.ngrids'}) {
-	die "The number of items in output.grids exceeds the value of input.ngrids in $config_file - exiting";
+    die "The number of items in output.grids exceeds the value of input.ngrids in $config_file - exiting";
 }
 
 unless(scalar(@{$config->{'output.grids'}}) == scalar(@{$config->{'output.files'}}) and scalar(@{$config->{'output.grids'}}) == scalar(@{$config->{'output.descriptions'}})) {
-	die "The number of items in output.grids, output.files, and output.descriptions do not match in $config_file - exiting";
+    die "The number of items in output.grids, output.files, and output.descriptions do not match in $config_file - exiting";
 }
 
 # --- Split the input file into ngrids pieces ---
