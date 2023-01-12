@@ -36,7 +36,7 @@ In the past, climate divisions data were estimated using a weighted average of d
 
 ### Environment
 
-The grids-to-climdivs application is designed to run in the [bash shell](https://www.gnu.org/software/bash/). The bash shell is available on Linux and MacOS systems, and on [Windows systems now as well](https://itsfoss.com/install-bash-on-windows/).
+The grids-to-climdivs application is designed to run in the [bash shell](https://www.gnu.org/software/bash/). The bash shell is available on Linux and MacOS systems, and on [Windows systems via Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install).
 
 ### Prerequisites
 
