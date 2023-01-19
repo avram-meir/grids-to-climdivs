@@ -137,8 +137,8 @@ my @climdivs_contents = <CLIMDIVS>; chomp @climdivs_contents;
 close(CLIMDIVS);
 my @climdivs;
 
-foreach my $line (@climdivs_contents) { 
-    my($num,$climdiv,$name) = split('|',$line);
+foreach my $line (@climdivs_contents) {
+    my($num,$climdiv,$name) = split(/\|/,$line);
     push(@climdivs,$climdiv);
 }
 
@@ -162,17 +162,17 @@ shift @hawaii_contents;
 my(%alaska,%conus,%hawaii);
 
 foreach my $line (@alaska_contents) {
-    my($cd,$val) = split(',',$line);
+    my($cd,$val) = split(/\|/,$line);
     $alaska{$cd} = $val;
 }
 
 foreach my $line (@conus_contents) {
-    my($cd,$val) = split(',',$line);
+    my($cd,$val) = split(/\|/,$line);
     $conus{$cd} = $val;
 }
 
 foreach my $line (@hawaii_contents) {
-    my($cd,$val) = split(',',$line);
+    my($cd,$val) = split(/\|/,$line);
     $hawaii{$cd} = $val;
 }
 
@@ -188,7 +188,7 @@ foreach my $climdiv (@climdivs) {
     elsif($climdiv =~ /HI/ and exists $hawaii{$climdiv} and abs($hawaii{$climdiv}) < 100000) { $val = $hawaii{$climdiv}; }
     elsif(exists $conus{$climdiv} and abs($conus{$climdiv}) < 100000) { $val = $conus{$climdiv}; }
 
-    print OUTPUT join(',',$climdiv,$val)."\n";
+    print OUTPUT join('|',$climdiv,$val)."\n";
 }
 
 close(OUTPUT);
